@@ -1,0 +1,8 @@
+# This file should be placed in the directory ABOVE the project root.
+# Example: /home/user/config.conf
+#
+# Do NOT commit this file to version control.
+
+SERVER_URL=http://your-jellyfin-instance:8096
+API_KEY=your-jellyfin-api-key
+USER_ID=your-jellyfin-user-id

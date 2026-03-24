@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pen Pal</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="crypto.js"></script>
+    <script src="db.js"></script>
+</head>
+<body>
+
+    <!-- Authentication Screen -->
+    <div id="auth-screen">
+        <div class="auth-container">
+            <h1>Pen Pal</h1>
+            
+            <div id="login-form">
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="login-email" placeholder="you@example.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••">
+                </div>
+                <button class="btn" onclick="app.login()">Sign In</button>
+                <button class="btn btn-secondary" onclick="app.showSignup()">Create Account</button>
+            </div>
+
+            <div id="signup-form" class="hidden">
+                <div class="input-group">
+                    <label>Username</label>
+                    <input type="text" id="signup-username" placeholder="Your Name">
+                </div>
+                <div class="input-group">
+                    <label>Email</label>
+                    <input type="email" id="signup-email" placeholder="you@example.com">
+                </div>
+                <div class="input-group">
+                    <label>Password</label>
+                    <input type="password" id="signup-password" placeholder="••••••••">
+                </div>
+                <button class="btn" onclick="app.signup()">Sign Up</button>
+                <button class="btn btn-secondary" onclick="app.showLogin()">Back to Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="app-container">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="user-profile">
+                <div class="avatar" id="current-user-avatar">?</div>
+                <div class="user-info">
+                    <h3 id="current-user-name">Loading...</h3>
+                    <span id="current-user-pid">PID: ...</span>
+                </div>
+            </div>
+
+            <nav class="nav-links">
+                <div class="nav-item active" onclick="app.switchView('chat')">Chat</div>
+                <div class="nav-item" onclick="app.switchView('pairing')">Pairing</div>
+                <div class="nav-item" onclick="app.logout()">Logout</div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content" id="chat-view">
+            <header class="chat-header">
+                <h2 id="chat-partner-name">Select a Partner</h2>
+                <span id="connection-status">Disconnected</span>
+            </header>
+
+            <div class="chat-messages" id="messages-container">
+                <!-- Messages will appear here -->
+                <div style="text-align: center; color: var(--text-muted); margin-top: 50px;">
+                    No messages yet.
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <textarea id="message-input" placeholder="Type a message..."></textarea>
+                <button class="send-btn" onclick="app.sendMessage()">➤</button>
+            </div>
+        </main>
+
+        <!-- Pairing View (Hidden by default) -->
+        <main class="main-content hidden" id="pairing-view">
+            <div style="padding: 40px; max-width: 600px; margin: 0 auto;">
+                <h1>Pairing</h1>
+                <p style="color: var(--text-muted); margin-bottom: 20px;">Connect with your Pen Pal using their PID.</p>
+                
+                <div class="input-group">
+                    <label>Partner's PID</label>
+                    <input type="text" id="target-pid" placeholder="e.g. A1B2C3">
+                </div>
+                <button class="btn" onclick="app.sendPairingRequest()" style="width: auto; padding: 12px 24px;">Send Request</button>
+
+                <div style="margin-top: 40px;">
+                    <h3>Incoming Requests</h3>
+                    <div id="incoming-requests" style="margin-top: 10px;">
+                        <!-- Requests go here -->
+                        <p style="color: var(--text-muted);">No pending requests.</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
