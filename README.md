@@ -1,51 +1,100 @@
 # PenPal Archive
 
-PenPal Archive is a private, end-to-end (E2E) encrypted letter-sharing application with a premium, atmospheric design. It's a digital sanctuary for slow, intentional communication, media browsing, and casual gaming.
+A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slowly. Features a premium, atmospheric design with media browsing and casual gaming.
 
 ## Key Features
 
-- **E2E Encrypted Letters:** All correspondence is encrypted locally. Only you and your paired friend can read them.
-- **Premium Atmospheric UI:** Dark-first design featuring frosted glass cards, subtle glow effects, smooth CSS transitions, and editorial-grade typography.
-- **Winding Letter Path:** A dynamic, living path of your shared history. Letters feel "worn" once read.
-- **Jellyfin Integration:** Browse your Jellyfin libraries (Movies, Shows, Music) and play audio in a persistent floating mini-player.
-- **Games Section:** Play Chess locally against a minimax AI. Styled perfectly to match your chosen theme.
-- **Three-Way Sync:** Letters are stored on the server and both paired devices for ultimate data safety.
-- **Theming:** Five switchable high-contrast themes based on Arkan's Color Palette.
+- **E2E Encrypted Letters**: All correspondence encrypted locally using RSA-OAEP + AES-GCM. Only paired users can read them.
+- **Premium UI**: Frosted glass cards, smooth CSS transitions, editorial typography.
+- **14 Themes**: 7 light + 7 dark themes. Defaults to white.
+- **Letter Path**: Curved path visualization of your shared letter history.
+- **Jellyfin Integration**: Browse Movies, Shows, Music with persistent mini-player.
+- **Chess**: Play locally against a minimax AI.
+- **Profile**: Customizable display name, bio, age, birthday, favorite food.
+- **Notifications**: Real-time alerts for pairing requests and letters.
 
 ## Tech Stack
 
-- **Backend:** Node.js, Express, SQLite, Axios.
-- **Frontend:** Vanilla JS, IndexedDB, Web Crypto API.
-- **Security:** RSA-OAEP, AES-GCM, PBKDF2.
+- **Backend**: Node.js, Express, sql.js (SQLite in-memory + file), Axios
+- **Frontend**: Vanilla JS, IndexedDB, Web Crypto API
+- **Security**: RSA-OAEP (2048-bit), AES-GCM (256-bit), PBKDF2
+
+## Quick Start
+
+```bash
+# Clone & install
+npm install
+
+# Run development server
+npm start
+```
+
+Visit http://localhost:3000
 
 ## Deployment
 
-### 1. Configure Jellyfin (Optional)
-Create a `config.conf` file in the directory **above** the project root:
-```conf
-SERVER_URL=http://your-jellyfin-ip:8096
-API_KEY=your-api-key
-USER_ID=your-user-id
+### Docker
+
+```bash
+# Build
+docker build -t pen-pal-archive .
+
+# Run
+docker run -d \
+  -p 3000:3000 \
+  --name pen-pal \
+  -v $(pwd)/data:/usr/src/app/data \
+  -v $(pwd)/uploads:/usr/src/app/uploads \
+  -e JWT_SECRET=$(openssl rand -base64 32) \
+  pen-pal
 ```
 
-### 2. One-Click Installation
+### One-Click Install
+
 ```bash
 curl -fsSL github.com/2kfi/pen-pal-archive/install.sh | sudo bash
 ```
 
-### 3. Manual Docker Deployment
-```bash
-docker build -t pen-pal-archive .
-docker run -d \
-  -p 3000:3000 \
-  --name pen-pal-archive \
-  -v $(pwd)/data:/usr/src/app/data \
-  -e JWT_SECRET=$(openssl rand -base64 32) \
-  pen-pal-archive
+## Configuration
+
+### Jellyfin (Optional)
+
+Create `config.conf` in the directory **above** the project root:
+
+```conf
+SERVER_URL=http://your-jellyfin-ip:8096
+API_KEY=your-jellyfin-api-key
+USER_ID=your-jellyfin-user-id
 ```
 
-## Security & Architecture
+### Environment Variables
 
-- **Private Keys:** Never sent to the server in plaintext. Encrypted with your password using AES-GCM before backup.
-- **Media Privacy:** Jellyfin credentials are read from a local config file and never exposed to the UI or stored in the database.
-- **Offline First:** IndexedDB ensures you can read your letters even without an internet connection.
+| Variable | Default | Description |
+|----------|---------|-------------|
+| PORT | 3000 | Server port |
+| JWT_SECRET | (random) | Secret for JWT signing |
+| NODE_ENV | production | Set to "development" for debug |
+
+## Security
+
+- Private keys encrypted with user's password (AES-GCM + PBKDF2)
+- Jellyfin credentials stored locally, never in DB or UI
+- E2E encryption ensures server never sees plaintext
+
+## API Endpoints
+
+- `POST /api/signup` - Create account
+- `POST /api/login` - Login
+- `GET /api/me` - Get current user
+- `PUT /api/me` - Update profile
+- `POST /api/pairing/request` - Send pairing request
+- `GET /api/pairing/status` - Get pairing status
+- `POST /api/pairing/accept` - Accept pairing
+- `POST /api/letters/send` - Send encrypted letter
+- `GET /api/letters/sync` - Get all letters
+- `POST /api/photos/upload` - Upload photo
+- `GET /api/notifications` - Get notifications
+
+## License
+
+ISC
