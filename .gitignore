@@ -28,3 +28,6 @@ yarn-error.log*
 
 # Config examples (don't ignore these, keep them for reference)
 !config.conf.example
+
+# Build artifacts
+public/chess.js

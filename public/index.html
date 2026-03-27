@@ -1,119 +1,427 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="white-light">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pen Pal</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
-    <script src="crypto.js"></script>
-    <script src="db.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PenPal Archive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="crypto.js"></script>
+  <script src="db.js"></script>
 </head>
 <body>
 
-    <!-- Authentication Screen -->
-    <div id="auth-screen">
-        <div class="auth-container">
-            <h1>Pen Pal</h1>
-            
-            <div id="login-form">
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="login-email" placeholder="you@example.com">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="login-password" placeholder="••••••••">
-                </div>
-                <button class="btn" onclick="app.login()">Sign In</button>
-                <button class="btn btn-secondary" onclick="app.showSignup()">Create Account</button>
-            </div>
+<!-- ==================== AUTH SCREEN ==================== -->
+<div id="auth-screen" class="screen active">
+  <div class="auth-bg"></div>
+  <div class="auth-card glass-card">
+    <div class="auth-brand">
+      <div class="brand-icon">&#9993;</div>
+      <h1>PenPal Archive</h1>
+      <p class="brand-tagline">Private letters. Encrypted memories.</p>
+    </div>
 
-            <div id="signup-form" class="hidden">
-                <div class="input-group">
-                    <label>Username</label>
-                    <input type="text" id="signup-username" placeholder="Your Name">
-                </div>
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="signup-email" placeholder="you@example.com">
-                </div>
-                <div class="input-group">
-                    <label>Password</label>
-                    <input type="password" id="signup-password" placeholder="••••••••">
-                </div>
-                <button class="btn" onclick="app.signup()">Sign Up</button>
-                <button class="btn btn-secondary" onclick="app.showLogin()">Back to Login</button>
-            </div>
+    <!-- Login Form -->
+    <div id="login-form" class="auth-form">
+      <div class="input-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" placeholder="Enter your password" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" id="btn-login">Sign In</button>
+      <div class="auth-divider"><span>or</span></div>
+      <div class="oauth-buttons">
+        <button class="btn btn-oauth" disabled title="Coming soon">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/><path fill="currentColor" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="currentColor" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="currentColor" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Google (Coming Soon)
+        </button>
+        <button class="btn btn-oauth" disabled title="Coming soon">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.8-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+          Apple (Coming Soon)
+        </button>
+      </div>
+      <p class="auth-switch">Don't have an account? <a href="#" id="show-signup">Sign up</a></p>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="signup-form" class="auth-form hidden">
+      <div class="input-group">
+        <label for="signup-username">Username</label>
+        <input type="text" id="signup-username" placeholder="Choose a username" autocomplete="username">
+      </div>
+      <div class="input-group">
+        <label for="signup-email">Email</label>
+        <input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="input-group">
+        <label for="signup-password">Password</label>
+        <input type="password" id="signup-password" placeholder="Create a strong password" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" id="btn-signup">Create Account</button>
+      <p class="auth-switch">Already have an account? <a href="#" id="show-login">Sign in</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app-container" class="screen">
+
+  <!-- Sidebar Navigation -->
+  <aside id="sidebar" class="glass-sidebar">
+    <div class="sidebar-header">
+      <div class="brand-mini">&#9993;</div>
+      <span class="brand-text">PenPal</span>
+    </div>
+
+    <div class="sidebar-profile">
+      <div class="avatar-ring">
+        <div class="avatar" id="sidebar-avatar">?</div>
+      </div>
+      <div class="profile-info">
+        <span class="profile-name" id="sidebar-name">Loading...</span>
+        <span class="profile-pid" id="sidebar-pid">PID: ...</span>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <button class="nav-btn active" data-view="letters" title="Letters">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <span>Letters</span>
+      </button>
+      <button class="nav-btn" data-view="pairing" title="Pairing">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+        <span>Pairing</span>
+      </button>
+      <button class="nav-btn" data-view="media" title="Media">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/><line x1="17" y1="17" x2="22" y2="17"/></svg>
+        <span>Media</span>
+      </button>
+      <button class="nav-btn" data-view="games" title="Games">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="6" width="20" height="12" rx="2"/><line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/><circle cx="17" cy="10" r="1"/><circle cx="15" cy="14" r="1"/></svg>
+        <span>Games</span>
+      </button>
+      <button class="nav-btn" data-view="settings" title="Settings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="nav-btn" id="btn-logout" title="Logout">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Mobile Top Bar -->
+  <header id="mobile-bar" class="glass-bar">
+    <button id="mobile-menu-btn" class="icon-btn">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <span class="mobile-title">PenPal Archive</span>
+    <button id="mobile-notif-btn" class="icon-btn notif-btn">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <span class="notif-badge hidden" id="notif-count">0</span>
+    </button>
+  </header>
+
+  <!-- ==================== LETTERS VIEW ==================== -->
+  <main id="view-letters" class="view active">
+    <div class="view-header glass-header">
+      <h2>Letter Path</h2>
+      <div class="view-actions">
+        <span id="letters-partner-status" class="status-badge">No partner</span>
+        <button class="btn btn-sm btn-primary" id="btn-new-letter" disabled>Write Letter</button>
+      </div>
+    </div>
+    <div class="letter-path-container" id="letter-path-container">
+      <div class="letter-path-empty" id="letter-path-empty">
+        <div class="empty-icon">&#9993;</div>
+        <h3>Your letter path is empty</h3>
+        <p>Pair with a friend and start writing letters to build your shared path.</p>
+      </div>
+      <svg id="letter-path-svg" class="letter-path-svg hidden" viewBox="0 0 800 2000" preserveAspectRatio="xMidYMin meet">
+        <defs>
+          <linearGradient id="path-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:var(--accent);stop-opacity:0.8"/>
+            <stop offset="100%" style="stop-color:var(--primary);stop-opacity:0.3"/>
+          </linearGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+            <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <path id="letter-path-line" d="" fill="none" stroke="url(#path-gradient)" stroke-width="3" stroke-linecap="round" filter="url(#glow)"/>
+      </svg>
+      <div id="letter-nodes-container" class="letter-nodes-container"></div>
+    </div>
+  </main>
+
+  <!-- ==================== LETTER COMPOSE MODAL ==================== -->
+  <div id="letter-compose-modal" class="modal-overlay hidden">
+    <div class="modal glass-card modal-lg">
+      <div class="modal-header">
+        <h3>Write a Letter</h3>
+        <button class="close-modal" id="close-compose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="input-group">
+          <label for="letter-delivery-date">Delivery Date (optional timer)</label>
+          <input type="datetime-local" id="letter-delivery-date">
         </div>
+        <div class="input-group">
+          <label>Content (Markdown supported)</label>
+          <textarea id="letter-content" class="letter-editor" placeholder="Dear friend..."></textarea>
+        </div>
+        <div class="letter-attachments">
+          <label class="attach-btn" for="letter-photo-input">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Attach Photo
+          </label>
+          <input type="file" id="letter-photo-input" accept="image/*" class="hidden">
+          <div id="letter-photo-preview" class="photo-preview"></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" id="cancel-compose">Cancel</button>
+        <button class="btn btn-primary" id="send-letter">Send Letter</button>
+      </div>
     </div>
+  </div>
 
-    <!-- Main App Container -->
-    <div id="app-container">
+  <!-- ==================== LETTER READ MODAL ==================== -->
+  <div id="letter-read-modal" class="modal-overlay hidden">
+    <div class="modal glass-card modal-lg">
+      <div class="modal-header">
+        <h3 id="read-letter-title">Letter</h3>
+        <button class="close-modal" id="close-read">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="letter-meta" id="read-letter-meta"></div>
+        <div class="letter-body" id="read-letter-body"></div>
+        <div class="letter-photos" id="read-letter-photos"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== PAIRING VIEW ==================== -->
+  <main id="view-pairing" class="view">
+    <div class="view-header glass-header">
+      <h2>Pairing</h2>
+    </div>
+    <div class="view-content">
+      <div class="pairing-section">
+        <div class="glass-card pairing-card">
+          <h3>Your Pairing Code</h3>
+          <div class="pid-display" id="my-pid">------</div>
+          <p class="hint">Share this code with your pen pal to connect.</p>
+        </div>
+
+        <div class="glass-card pairing-card">
+          <h3>Connect with a Pen Pal</h3>
+          <div class="input-group">
+            <label for="target-pid">Enter their Pairing Code</label>
+            <input type="text" id="target-pid" placeholder="e.g. A1B2C3" maxlength="6" style="text-transform:uppercase">
+          </div>
+          <button class="btn btn-primary" id="btn-send-pair">Send Pairing Request</button>
+        </div>
+
+        <div class="glass-card pairing-card">
+          <h3>Incoming Requests</h3>
+          <div id="incoming-requests" class="request-list">
+            <p class="empty-text">No pending requests.</p>
+          </div>
+        </div>
+
+        <div class="glass-card pairing-card">
+          <h3>Current Partner</h3>
+          <div id="current-partner" class="partner-info">
+            <p class="empty-text">Not paired yet.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== MEDIA VIEW ==================== -->
+  <main id="view-media" class="view">
+    <div class="view-header glass-header">
+      <h2>Media</h2>
+    </div>
+    <div class="view-content">
+      <div id="media-not-configured" class="glass-card media-placeholder">
+        <div class="empty-icon">&#127916;</div>
+        <h3>Media not configured</h3>
+        <p>Jellyfin integration is not set up. Add your credentials to config.conf to enable media browsing.</p>
+      </div>
+      <div id="media-content" class="hidden">
+        <div id="media-libraries" class="media-libraries"></div>
+        <div id="media-items" class="media-items hidden"></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== GAMES VIEW ==================== -->
+  <main id="view-games" class="view">
+    <div class="view-header glass-header">
+      <h2>Games</h2>
+    </div>
+    <div class="view-content">
+      <div class="games-grid">
+        <div class="glass-card game-card" id="game-chess-card">
+          <div class="game-icon">&#9812;</div>
+          <h3>Chess</h3>
+          <p>Play against a minimax AI</p>
+          <div class="game-actions">
+            <button class="btn btn-primary btn-sm" id="btn-play-chess">Play vs AI</button>
+            <button class="btn btn-secondary btn-sm" disabled title="Coming soon">vs Friend (Soon)</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ==================== CHESS MODAL ==================== -->
+  <div id="chess-modal" class="modal-overlay hidden">
+    <div class="modal glass-card modal-xl">
+      <div class="modal-header">
+        <h3>Chess</h3>
+        <button class="close-modal" id="close-chess">&times;</button>
+      </div>
+      <div class="modal-body chess-body">
+        <div class="chess-info">
+          <span id="chess-turn">White's turn</span>
+          <span id="chess-status"></span>
+        </div>
+        <div id="chess-board" class="chess-board"></div>
+        <div class="chess-controls">
+          <button class="btn btn-secondary btn-sm" id="chess-new-game">New Game</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== SETTINGS VIEW ==================== -->
+  <main id="view-settings" class="view">
+    <div class="view-header glass-header">
+      <h2>Settings</h2>
+    </div>
+    <div class="view-content settings-content">
+      <div class="glass-card settings-section">
+        <h3>Profile</h3>
+        <div class="settings-grid">
+          <div class="input-group">
+            <label for="settings-friendly-name">Display Name</label>
+            <input type="text" id="settings-friendly-name" placeholder="Your display name">
+          </div>
+          <div class="input-group">
+            <label for="settings-bio">Bio (max 256 chars)</label>
+            <textarea id="settings-bio" maxlength="256" rows="3" placeholder="Tell your pen pal about yourself..."></textarea>
+          </div>
+          <div class="settings-row">
+            <div class="input-group">
+              <label for="settings-age">Age</label>
+              <input type="number" id="settings-age" min="1" max="150" placeholder="Age">
+            </div>
+            <div class="input-group">
+              <label for="settings-birthday">Birthday</label>
+              <input type="date" id="settings-birthday">
+            </div>
+          </div>
+          <div class="input-group">
+            <label for="settings-food">Favorite Food</label>
+            <input type="text" id="settings-food" placeholder="What do you love to eat?">
+          </div>
+        </div>
+        <button class="btn btn-primary" id="btn-save-profile">Save Profile</button>
+      </div>
+
+      <div class="glass-card settings-section">
+        <h3>Theme</h3>
+        <p class="hint">Choose your visual theme. Default is white.</p>
         
-        <!-- Sidebar -->
-        <aside class="sidebar">
-            <div class="user-profile">
-                <div class="avatar" id="current-user-avatar">?</div>
-                <div class="user-info">
-                    <h3 id="current-user-name">Loading...</h3>
-                    <span id="current-user-pid">PID: ...</span>
-                </div>
-            </div>
-
-            <nav class="nav-links">
-                <div class="nav-item active" onclick="app.switchView('chat')">Chat</div>
-                <div class="nav-item" onclick="app.switchView('pairing')">Pairing</div>
-                <div class="nav-item" onclick="app.logout()">Logout</div>
-            </nav>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="main-content" id="chat-view">
-            <header class="chat-header">
-                <h2 id="chat-partner-name">Select a Partner</h2>
-                <span id="connection-status">Disconnected</span>
-            </header>
-
-            <div class="chat-messages" id="messages-container">
-                <!-- Messages will appear here -->
-                <div style="text-align: center; color: var(--text-muted); margin-top: 50px;">
-                    No messages yet.
-                </div>
-            </div>
-
-            <div class="chat-input-area">
-                <textarea id="message-input" placeholder="Type a message..."></textarea>
-                <button class="send-btn" onclick="app.sendMessage()">➤</button>
-            </div>
-        </main>
-
-        <!-- Pairing View (Hidden by default) -->
-        <main class="main-content hidden" id="pairing-view">
-            <div style="padding: 40px; max-width: 600px; margin: 0 auto;">
-                <h1>Pairing</h1>
-                <p style="color: var(--text-muted); margin-bottom: 20px;">Connect with your Pen Pal using their PID.</p>
-                
-                <div class="input-group">
-                    <label>Partner's PID</label>
-                    <input type="text" id="target-pid" placeholder="e.g. A1B2C3">
-                </div>
-                <button class="btn" onclick="app.sendPairingRequest()" style="width: auto; padding: 12px 24px;">Send Request</button>
-
-                <div style="margin-top: 40px;">
-                    <h3>Incoming Requests</h3>
-                    <div id="incoming-requests" style="margin-top: 10px;">
-                        <!-- Requests go here -->
-                        <p style="color: var(--text-muted);">No pending requests.</p>
-                    </div>
-                </div>
-            </div>
-        </main>
-
+        <div class="theme-dark-toggle">
+          <button id="theme-light" class="active">Light</button>
+          <button id="theme-dark">Dark</button>
+        </div>
+        
+        <div class="theme-grid" id="theme-grid">
+          <!-- Light Themes -->
+          <button class="theme-swatch" data-theme="white-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#FFFFFF,#F8F8F8,#AB0358)"></div>
+            <span>Default White</span>
+          </button>
+          <button class="theme-swatch" data-theme="crimson-noir-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#F6EBEF,#FFF9FA,#AB0358)"></div>
+            <span>Crimson</span>
+          </button>
+          <button class="theme-swatch" data-theme="velvet-throne-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#F2EAEF,#FAF5FA,#6A2A5B)"></div>
+            <span>Velvet</span>
+          </button>
+          <button class="theme-swatch" data-theme="warm-earth-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#EADFD4,#F5F0EB,#8A7F73)"></div>
+            <span>Warm Earth</span>
+          </button>
+          <button class="theme-swatch" data-theme="forest-silence-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#E6F8C3,#FAFCFA,#3E4A3F)"></div>
+            <span>Forest</span>
+          </button>
+          <button class="theme-swatch" data-theme="steel-sky-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#F2EFEA,#F5F7F8,#0064B8)"></div>
+            <span>Steel &amp; Sky</span>
+          </button>
+          <button class="theme-swatch" data-theme="ocean-depths-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#89A1BD,#EDF3F8,#0064B8)"></div>
+            <span>Ocean</span>
+          </button>
+          <button class="theme-swatch" data-theme="royal-blush-light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#F0E0F0,#FAF5FA,#6A2A5B)"></div>
+            <span>Royal Blush</span>
+          </button>
+        </div>
+      </div>
     </div>
+  </main>
 
-    <script src="app.js"></script>
+  <!-- ==================== FLOATING MINI PLAYER ==================== -->
+  <div id="mini-player" class="mini-player glass-card hidden">
+    <div class="mini-player-info">
+      <span id="mini-player-title">No track</span>
+      <span id="mini-player-artist"></span>
+    </div>
+    <div class="mini-player-controls">
+      <button class="icon-btn" id="mini-play-pause">
+        <svg id="icon-play" width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        <svg id="icon-pause" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" class="hidden"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+      </button>
+      <button class="icon-btn" id="mini-close">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <audio id="mini-audio"></audio>
+  </div>
+
+  <!-- ==================== NOTIFICATIONS PANEL ==================== -->
+  <div id="notif-panel" class="notif-panel glass-card hidden">
+    <div class="notif-header">
+      <h3>Notifications</h3>
+      <button class="btn btn-sm btn-secondary" id="btn-clear-notifs">Mark all read</button>
+    </div>
+    <div id="notif-list" class="notif-list">
+      <p class="empty-text">No notifications.</p>
+    </div>
+  </div>
+
+</div>
+
+<script src="chess.js"></script>
+<script src="app.js"></script>
 </body>
 </html>
