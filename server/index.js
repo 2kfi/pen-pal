@@ -6,12 +6,24 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const initSqlJs = require('sql.js');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'change-this-secret';
+
+// DB Reset Code - changes on server restart and every 24 hours
+let dbResetCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+let dbResetCodeExpiry = Date.now() + (24 * 60 * 60 * 1000); // 24 hours
+
+// Regenerate code every 24 hours
+setInterval(() => {
+  dbResetCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+  dbResetCodeExpiry = Date.now() + (24 * 60 * 60 * 1000);
+  console.log('[DB] Reset code regenerated');
+}, 24 * 60 * 60 * 1000);
 
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
@@ -111,7 +123,7 @@ app.post('/api/signup', async (req, res) => {
     const lastId = result[0]?.values[0]?.[0];
     const token = jwt.sign({ id: lastId, username, pid }, JWT_SECRET);
     saveDB();
-    res.json({ token, user: { id: lastId, username, email, pid, friendly_name: friendlyName } });
+    res.json({ token, user: { id: lastId, username, email, pid, friendly_name: friendlyName, publicKey, encryptedPrivateKey } });
   } catch (err) {
     console.error('Signup error:', err.message);
     res.status(400).json({ error: 'Username or email already exists' });
@@ -157,7 +169,7 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', authenticateToken, (req, res) => {
-  const stmt = db.prepare('SELECT id, username, friendly_name, email, pid, public_key, encrypted_private_key, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?');
+  const stmt = db.prepare('SELECT id, username, friendly_name, email, pid, public_key as publicKey, encrypted_private_key as encryptedPrivateKey, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?');
   stmt.bind([req.user.id]);
   if (stmt.step()) {
     const user = stmt.getAsObject();
@@ -233,7 +245,7 @@ app.get('/api/pairing/status', authenticateToken, (req, res) => {
   let partner = null;
   if (currentPair) {
     const partnerId = currentPair.user1_id === req.user.id ? currentPair.user2_id : currentPair.user1_id;
-    stmt = db.prepare('SELECT id, username, friendly_name, pid, public_key, avatar_url FROM users WHERE id = ?');
+    stmt = db.prepare('SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?');
     stmt.bind([partnerId]);
     if (stmt.step()) partner = stmt.getAsObject();
     stmt.free();
@@ -337,10 +349,51 @@ app.get('/api/jellyfin/status', authenticateToken, (req, res) => {
   res.json({ configured: jellyfin.isConfigured() });
 });
 
+// DB Reset Endpoint
+app.post('/api/admin/reset-db', authenticateToken, (req, res) => {
+  const { code } = req.body;
+  
+  if (!code) {
+    return res.status(400).json({ error: 'Reset code required' });
+  }
+  
+  if (code.toUpperCase() !== dbResetCode) {
+    return res.status(403).json({ error: 'Invalid reset code' });
+  }
+  
+  if (Date.now() > dbResetCodeExpiry) {
+    return res.status(403).json({ error: 'Reset code expired' });
+  }
+  
+  try {
+    // Drop all tables
+    db.run('DROP TABLE IF EXISTS users');
+    db.run('DROP TABLE IF EXISTS pairs');
+    db.run('DROP TABLE IF EXISTS letters');
+    db.run('DROP TABLE IF EXISTS pairings');
+    db.run('DROP TABLE IF EXISTS notifications');
+    db.run('DROP TABLE IF EXISTS photos');
+    
+    // Reinitialize database
+    initDB();
+    
+    // Generate new reset code
+    dbResetCode = crypto.randomBytes(4).toString('hex').toUpperCase();
+    dbResetCodeExpiry = Date.now() + (24 * 60 * 60 * 1000);
+    
+    console.log('[DB] Database has been reset');
+    res.json({ success: true, message: 'Database reset successfully' });
+  } catch (err) {
+    console.error('[DB] Reset failed:', err);
+    res.status(500).json({ error: 'Failed to reset database' });
+  }
+});
+
 async function startServer() {
   try {
     await initDB();
     console.log('Database initialized');
+    console.log(`[DB] Reset code: ${dbResetCode} (expires in 24 hours)`);
   } catch (e) {
     console.error('Failed to init DB:', e);
   }

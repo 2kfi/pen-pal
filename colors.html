@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PenPal Archive — Theme Colors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:       #0c0d0f;
+      --bg2:      #111418;
+      --bg3:      #181d24;
+      --border:   #1f2631;
+      --amber:    #e8a020;
+      --amber2:   #f5c048;
+      --teal:     #2ec4b6;
+      --muted:    #6a7a8f;
+      --text:     #c8d4e0;
+      --white:    #eef3f8;
+      --red:      #d9534f;
+      --nav-bg:   rgba(12,13,15,0.85);
+      --glow:     rgba(232,160,32,0.05);
+      --map-stat-bg: rgba(255,255,255,0.03);
+      --neighborhood-gradient-end: #131a22;
+      --terminal-bg: #080a0d;
+      --terminal-green: #5fbf6a;
+      --amber-border: rgba(232,160,32,0.2);
+      --teal-border: rgba(46,196,182,0.3);
+      --amber-border-tag: rgba(232,160,32,0.3);
+      --quote-bg:  rgba(232,160,32,0.08);
+      --mono:     'Space Mono', monospace;
+      --sans:     'Syne', sans-serif;
+      --arabic:   'Noto Kufi Arabic', sans-serif;
+    }
+
+    body.easter-egg-active {
+      --bg:       #faf8f4;
+      --bg2:      #ffffff;
+      --bg3:      #fafafa;
+      --border:   #d4dcc8;
+      --amber:    #7cb342;
+      --amber2:   #9ccc65;
+      --teal:     #81c784;
+      --muted:    #8a9a7e;
+      --text:     #4a5a3e;
+      --white:    #2e3d24;
+      --nav-bg:   rgba(250,248,244,0.85);
+      --glow:     rgba(124,179,66,0.05);
+      --map-stat-bg: rgba(255,255,255,0.3);
+      --neighborhood-gradient-end: #fafafa;
+      --terminal-bg: var(--bg3);
+      --terminal-green: var(--teal);
+      --amber-border: rgba(124,179,66,0.2);
+      --teal-border: rgba(129,199,132,0.3);
+      --amber-border-tag: rgba(124,179,66,0.3);
+      --quote-bg:  rgba(124,179,66,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      line-height: 1.6;
+      padding: 40px;
+      transition: background-color 0.8s ease, color 0.6s ease;
+    }
+
+    h1 {
+      color: var(--white);
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .nav-link {
+      color: var(--amber);
+      text-decoration: none;
+      margin-bottom: 20px;
+      display: inline-block;
+    }
+    .nav-link:hover {
+      color: var(--amber2);
+    }
+
+    .toggle-btn {
+      background: var(--amber);
+      color: var(--bg);
+      border: none;
+      padding: 12px 24px;
+      font-family: var(--mono);
+      font-size: 14px;
+      cursor: pointer;
+      margin-bottom: 40px;
+      transition: background 0.2s;
+    }
+    .toggle-btn:hover {
+      background: var(--amber2);
+    }
+
+    .demo {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+      margin-top: 32px;
+    }
+
+    .card {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      padding: 24px;
+      transition: border-color 0.2s, background-color 0.6s ease;
+    }
+    .card:hover {
+      border-color: var(--amber);
+    }
+
+    .card h3 {
+      color: var(--white);
+      font-family: var(--sans);
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .card p {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 16px;
+    }
+
+    .color-swatch {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--border);
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    .code {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+      background: var(--terminal-bg);
+      padding: 16px;
+      border: 1px solid var(--border);
+      margin-top: 24px;
+      line-height: 1.8;
+    }
+
+    .tag {
+      display: inline-block;
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--teal);
+      border: 1px solid var(--teal-border);
+      padding: 3px 8px;
+      letter-spacing: 0.06em;
+      margin-right: 6px;
+    }
+
+    .tag-amber {
+      color: var(--amber);
+      border-color: var(--amber-border-tag);
+    }
+
+    .quote {
+      border-left: 3px solid var(--amber);
+      padding: 20px;
+      background: var(--quote-bg);
+      margin-top: 24px;
+    }
+
+    .quote p {
+      font-family: var(--sans);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--white);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+
+  <a href="/" class="nav-link">← Back to PenPal Archive</a>
+  <h1>PenPal Archive — Theme Colors</h1>
+  <p style="color: var(--muted); margin-bottom: 20px;">
+    Click the button to switch between dark (default) and light themes. All color variables update accordingly.
+  </p>
+  <button class="toggle-btn" id="toggle">Toggle Theme</button>
+
+  <div class="demo">
+    <div class="card">
+      <h3>Background Colors</h3>
+      <p>
+        <span class="color-swatch" style="background: var(--bg)"></span>
+        <code>--bg</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--bg2)"></span>
+        <code>--bg2</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--bg3)"></span>
+        <code>--bg3</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--border)"></span>
+        <code>--border</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Accent Colors</h3>
+      <p>
+        <span class="color-swatch" style="background: var(--amber)"></span>
+        <code>--amber</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--amber2)"></span>
+        <code>--amber2</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--teal)"></span>
+        <code>--teal</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--red)"></span>
+        <code>--red</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Text Colors</h3>
+      <p>
+        <span class="color-swatch" style="background: var(--text)"></span>
+        <code>--text</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--white)"></span>
+        <code>--white</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--muted)"></span>
+        <code>--muted</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Component Colors</h3>
+      <p>
+        <span class="color-swatch" style="background: var(--terminal-bg)"></span>
+        <code>--terminal-bg</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--terminal-green)"></span>
+        <code>--terminal-green</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--nav-bg)"></span>
+        <code>--nav-bg</code>
+      </p>
+      <p>
+        <span class="color-swatch" style="background: var(--quote-bg)"></span>
+        <code>--quote-bg</code>
+      </p>
+    </div>
+
+    <div class="card">
+      <h3>Tags</h3>
+      <span class="tag">Arch Linux</span>
+      <span class="tag">TypeScript</span>
+      <span class="tag tag-amber">Air-Gapped</span>
+      <span class="tag tag-amber">~$20 Setup</span>
+    </div>
+
+    <div class="card">
+      <h3>Quote</h3>
+      <div class="quote">
+        <p>"Infrastructure for a self-sustaining digital community, built on privacy, open source, and resilience."</p>
+      </div>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <h3>Terminal Example</h3>
+      <div class="code">
+        <span style="color: var(--teal)">user@penpal</span><span style="color: var(--white)"> ~ $ </span><span style="color: var(--amber)">cat /etc/penpal.conf</span><br>
+        <span style="color: var(--muted)"># PenPal Archive Configuration</span><br>
+        <span style="color: var(--terminal-green)">ENCRYPTION</span>=<span style="color: var(--amber)">E2E-RSA-AES</span><br>
+        <span style="color: var(--terminal-green)">CLOUD_DEPENDENCIES</span>=<span style="color: var(--red)">0</span>
+      </div>
+    </div>
+
+    <div class="card" style="grid-column: span 2;">
+      <h3>All Variables</h3>
+      <p style="color: var(--muted); font-size: 14px;">
+        See <code>colors.md</code> for a full list of CSS custom properties and their values for both themes.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    const toggle = document.getElementById('toggle');
+    toggle.addEventListener('click', () => {
+      document.body.classList.toggle('easter-egg-active');
+    });
+  </script>
+</body>
+</html>

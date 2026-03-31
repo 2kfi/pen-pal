@@ -10,8 +10,8 @@ const app = {
     letters: [],
     notifications: [],
     currentView: 'letters',
-    currentTheme: localStorage.getItem('theme') || 'white-light',
-    isDarkMode: false,
+    currentTheme: localStorage.getItem('theme') || 'dark',
+    isDarkMode: true,
     uploadedPhotos: []
   },
 
@@ -22,9 +22,9 @@ const app = {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     this.state.isDarkMode = prefersDark;
     
-    // If no saved theme, default to white
+    // If no saved theme, default to dark
     if (!localStorage.getItem('theme')) {
-      this.state.currentTheme = 'white-light';
+      this.state.currentTheme = 'dark';
     }
     
     this.applyTheme(this.state.currentTheme);
@@ -96,10 +96,19 @@ const app = {
       this.state.user = data.user;
       localStorage.setItem('auth_token', data.token);
 
-      if (data.user.encryptedPrivateKey) {
-        const encryptedKey = JSON.parse(data.user.encryptedPrivateKey);
-        const privateKeyJwk = await window.CryptoUtils.decryptPrivateKey(encryptedKey, password);
-        this.state.privateKey = await window.CryptoUtils.importPrivateKey(privateKeyJwk);
+      // Decrypt private key if it exists
+      if (data.user.encryptedPrivateKey && data.user.encryptedPrivateKey !== '') {
+        try {
+          const encryptedKey = JSON.parse(data.user.encryptedPrivateKey);
+          const privateKeyJwk = await window.CryptoUtils.decryptPrivateKey(encryptedKey, password);
+          this.state.privateKey = await window.CryptoUtils.importPrivateKey(privateKeyJwk);
+        } catch (e) {
+          console.error('Failed to decrypt private key:', e);
+          alert('Warning: Could not decrypt your encryption keys. Letters may not be readable.');
+        }
+      } else {
+        console.warn('User has no encryption keys - this account was created before E2E was enabled');
+        alert('Your account does not have encryption keys. Please sign up again to enable letter sending.');
       }
 
       this.showApp();
@@ -425,14 +434,57 @@ const app = {
   },
 
   async sendLetter() {
-    if (!this.state.partner) return alert('No partner connected!');
+    // Validate partner exists
+    if (!this.state.partner) {
+      alert('No partner connected! Please pair with someone first.');
+      return;
+    }
+    
+    // Validate partner has public key
+    if (!this.state.partner.publicKey) {
+      alert('Your partner does not have encryption keys set up. They need to sign up again.');
+      return;
+    }
+    
+    // Validate user has private key
+    if (!this.state.privateKey) {
+      alert('Your encryption keys are not loaded. Please log out and log back in.');
+      return;
+    }
+    
+    // Validate user has public key
+    if (!this.state.user.publicKey) {
+      alert('Your public key is not available. Please log out and log back in.');
+      return;
+    }
     
     const content = document.getElementById('letter-content').value.trim();
-    if (!content) return alert('Write something!');
+    if (!content) {
+      alert('Please write something in your letter!');
+      return;
+    }
+
+    const sendBtn = document.getElementById('send-letter');
+    sendBtn.disabled = true;
+    sendBtn.textContent = 'Sending...';
 
     try {
-      const partnerPublicKey = JSON.parse(this.state.partner.public_key);
-      const myPublicKey = JSON.parse(this.state.user.public_key);
+      let partnerPublicKey;
+      let myPublicKey;
+      
+      console.log('DEBUG - Checking keys...');
+      console.log('  Partner publicKey:', this.state.partner.publicKey ? 'EXISTS' : 'MISSING');
+      console.log('  User publicKey:', this.state.user.publicKey ? 'EXISTS' : 'MISSING');
+      console.log('  User privateKey:', this.state.privateKey ? 'EXISTS' : 'MISSING');
+      
+      try {
+        partnerPublicKey = JSON.parse(this.state.partner.publicKey);
+        myPublicKey = JSON.parse(this.state.user.publicKey);
+        console.log('DEBUG - Keys parsed successfully');
+      } catch (e) {
+        console.error('DEBUG - Key parse error:', e);
+        throw new Error('Failed to parse encryption keys. Keys may be corrupted.');
+      }
 
       const encryptedData = await window.CryptoUtils.encryptLetter(
         content,
@@ -440,9 +492,10 @@ const app = {
         myPublicKey
       );
 
-      const deliveredAt = document.getElementById('letter-delivery-date').value || new Date().toISOString();
+      const dateInput = document.getElementById('letter-delivery-date').value;
+      const deliveredAt = dateInput ? new Date(dateInput).toISOString() : new Date().toISOString();
 
-      await fetch(`${API_URL}/letters/send`, {
+      const res = await fetch(`${API_URL}/letters/send`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -456,11 +509,20 @@ const app = {
         })
       });
 
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Server rejected the letter');
+      }
+
       this.closeComposeModal();
-      this.loadLetters();
+      await this.loadLetters();
+      alert('Letter sent successfully!');
     } catch (err) {
-      console.error('Send failed', err);
-      alert('Failed to send letter');
+      console.error('Send letter failed:', err);
+      alert(`Failed to send letter: ${err.message}`);
+    } finally {
+      sendBtn.disabled = false;
+      sendBtn.textContent = 'Send Letter';
     }
   },
 
@@ -578,21 +640,9 @@ const app = {
 
   setTheme(theme) {
     this.state.currentTheme = theme;
+    this.state.isDarkMode = theme === 'dark';
     localStorage.setItem('theme', theme);
     this.applyTheme(theme);
-  },
-
-  toggleThemeMode(isDark) {
-    this.state.isDarkMode = isDark;
-    const baseTheme = this.state.currentTheme.replace('-light', '').replace('-dark', '');
-    const newTheme = isDark ? `${baseTheme}-dark` : `${baseTheme}-light`;
-    this.state.currentTheme = newTheme;
-    localStorage.setItem('theme', newTheme);
-    this.applyTheme(newTheme);
-    
-    // Update toggle buttons
-    document.getElementById('theme-light').classList.toggle('active', !isDark);
-    document.getElementById('theme-dark').classList.toggle('active', isDark);
   },
 
   // --- Notifications ---
@@ -690,9 +740,6 @@ document.querySelectorAll('.theme-swatch').forEach(btn => {
   btn.onclick = () => app.setTheme(btn.dataset.theme);
 });
 
-document.getElementById('theme-light').onclick = () => app.toggleThemeMode(false);
-document.getElementById('theme-dark').onclick = () => app.toggleThemeMode(true);
-
 document.getElementById('mobile-menu-btn').onclick = () => {
   document.getElementById('sidebar').classList.toggle('open');
 };
@@ -709,6 +756,37 @@ document.getElementById('close-chess').onclick = () => {
   document.getElementById('chess-modal').classList.add('hidden');
 };
 document.getElementById('chess-new-game').onclick = () => window.Chess.init();
+
+// DB Reset
+document.getElementById('btn-db-reset').onclick = async () => {
+  const code = document.getElementById('db-reset-code').value.trim();
+  if (!code) return alert('Please enter a reset code');
+  
+  if (!confirm('This will DELETE ALL DATA including users, letters, and pairings. Continue?')) {
+    return;
+  }
+  
+  try {
+    const res = await fetch('/api/admin/reset-db', {
+      method: 'POST',
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${app.state.token}` 
+      },
+      body: JSON.stringify({ code })
+    });
+    const data = await res.json();
+    
+    if (res.ok) {
+      alert('Database reset successfully. Please login again.');
+      app.logout();
+    } else {
+      alert(data.error || 'Failed to reset database');
+    }
+  } catch (err) {
+    alert('Failed to connect to server');
+  }
+};
 
 // Close modals on overlay click
 document.querySelectorAll('.modal-overlay').forEach(overlay => {

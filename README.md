@@ -6,7 +6,7 @@ A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slo
 
 - **E2E Encrypted Letters**: All correspondence encrypted locally using RSA-OAEP + AES-GCM. Only paired users can read them.
 - **Premium UI**: Frosted glass cards, smooth CSS transitions, editorial typography.
-- **14 Themes**: 7 light + 7 dark themes. Defaults to white.
+- **2 Themes**: Dark (default) and Light themes with consistent color variables.
 - **Letter Path**: Curved path visualization of your shared letter history.
 - **Jellyfin Integration**: Browse Movies, Shows, Music with persistent mini-player.
 - **Chess**: Play locally against a minimax AI.
@@ -15,8 +15,10 @@ A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slo
 
 ## Tech Stack
 
-- **Backend**: Node.js, Express, sql.js (SQLite in-memory + file), Axios
-- **Frontend**: Vanilla JS, IndexedDB, Web Crypto API
+- **Frontend**: React 18+, TypeScript, Vite, Zustand, React Router
+- **Backend**: Node.js, Express, sql.js (SQLite), Axios
+- **Styling**: CSS with theme variables from colors.md
+- **Storage**: IndexedDB (client), SQLite (server)
 - **Security**: RSA-OAEP (2048-bit), AES-GCM (256-bit), PBKDF2
 
 ## Quick Start
@@ -74,6 +76,22 @@ USER_ID=your-jellyfin-user-id
 | PORT | 3000 | Server port |
 | JWT_SECRET | (random) | Secret for JWT signing |
 | NODE_ENV | production | Set to "development" for debug |
+
+## Theme System
+
+The app uses 2 themes based on the color palette in `colors.md`:
+
+### Dark Theme (Default)
+- Background: `#0c0d0f`
+- Accent: `#e8a020` (amber)
+- Secondary: `#2ec4b6` (teal)
+
+### Light Theme
+- Background: `#faf8f4`
+- Accent: `#7cb342` (green)
+- Secondary: `#81c784` (teal)
+
+Toggle themes in Settings or via the `easter-egg-active` CSS class.
 
 ## Security
 

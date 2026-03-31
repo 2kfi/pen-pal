@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="white-light">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PenPal Archive</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="crypto.js"></script>
   <script src="db.js"></script>
@@ -344,47 +344,27 @@
 
       <div class="glass-card settings-section">
         <h3>Theme</h3>
-        <p class="hint">Choose your visual theme. Default is white.</p>
-        
-        <div class="theme-dark-toggle">
-          <button id="theme-light" class="active">Light</button>
-          <button id="theme-dark">Dark</button>
-        </div>
+        <p class="hint">Choose your visual theme. Default is dark.</p>
         
         <div class="theme-grid" id="theme-grid">
-          <!-- Light Themes -->
-          <button class="theme-swatch" data-theme="white-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#FFFFFF,#F8F8F8,#AB0358)"></div>
-            <span>Default White</span>
+          <!-- Theme swatches for preview -->
+          <button class="theme-swatch active" data-theme="dark">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#0c0d0f,#111418,#e8a020)"></div>
+            <span>Dark (Default)</span>
           </button>
-          <button class="theme-swatch" data-theme="crimson-noir-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#F6EBEF,#FFF9FA,#AB0358)"></div>
-            <span>Crimson</span>
+          <button class="theme-swatch" data-theme="light">
+            <div class="swatch-preview" style="background:linear-gradient(135deg,#faf8f4,#ffffff,#7cb342)"></div>
+            <span>Light</span>
           </button>
-          <button class="theme-swatch" data-theme="velvet-throne-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#F2EAEF,#FAF5FA,#6A2A5B)"></div>
-            <span>Velvet</span>
-          </button>
-          <button class="theme-swatch" data-theme="warm-earth-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#EADFD4,#F5F0EB,#8A7F73)"></div>
-            <span>Warm Earth</span>
-          </button>
-          <button class="theme-swatch" data-theme="forest-silence-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#E6F8C3,#FAFCFA,#3E4A3F)"></div>
-            <span>Forest</span>
-          </button>
-          <button class="theme-swatch" data-theme="steel-sky-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#F2EFEA,#F5F7F8,#0064B8)"></div>
-            <span>Steel &amp; Sky</span>
-          </button>
-          <button class="theme-swatch" data-theme="ocean-depths-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#89A1BD,#EDF3F8,#0064B8)"></div>
-            <span>Ocean</span>
-          </button>
-          <button class="theme-swatch" data-theme="royal-blush-light">
-            <div class="swatch-preview" style="background:linear-gradient(135deg,#F0E0F0,#FAF5FA,#6A2A5B)"></div>
-            <span>Royal Blush</span>
-          </button>
+        </div>
+        
+        <!-- DB Reset (Hidden - for emergency use) -->
+        <div class="db-reset-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border);">
+          <p class="hint" style="font-size: 11px; color: var(--muted);">Database Management</p>
+          <div class="input-group" style="margin-top: 10px;">
+            <input type="text" id="db-reset-code" placeholder="Enter reset code" style="text-transform:uppercase;">
+          </div>
+          <button class="btn btn-secondary btn-sm" id="btn-db-reset" style="margin-top: 10px;">Reset Database</button>
         </div>
       </div>
     </div>

@@ -1,0 +1,60 @@
+# PenPal Archive Color Themes
+
+## Dark Theme (default)
+
+| Variable | Value |
+|----------|-------|
+| `--bg` | `#0c0d0f` |
+| `--bg2` | `#111418` |
+| `--bg3` | `#181d24` |
+| `--border` | `#1f2631` |
+| `--amber` | `#e8a020` |
+| `--amber2` | `#f5c048` |
+| `--teal` | `#2ec4b6` |
+| `--muted` | `#6a7a8f` |
+| `--text` | `#c8d4e0` |
+| `--white` | `#eef3f8` |
+| `--red` | `#d9534f` |
+| `--nav-bg` | `rgba(12,13,15,0.85)` |
+| `--glow` | `rgba(232,160,32,0.05)` |
+| `--map-stat-bg` | `rgba(255,255,255,0.03)` |
+| `--neighborhood-gradient-end` | `#131a22` |
+| `--terminal-bg` | `#080a0d` |
+| `--terminal-green` | `#5fbf6a` |
+| `--amber-border` | `rgba(232,160,32,0.2)` |
+| `--teal-border` | `rgba(46,196,182,0.3)` |
+| `--amber-border-tag` | `rgba(232,160,32,0.3)` |
+| `--quote-bg` | `rgba(232,160,32,0.08)` |
+| `--mono` | `'Space Mono', monospace` |
+| `--sans` | `'Syne', sans-serif` |
+| `--arabic` | `'Noto Kufi Arabic', sans-serif` |
+
+## Light Theme (easter-egg-active)
+
+| Variable | Value |
+|----------|-------|
+| `--bg` | `#faf8f4` |
+| `--bg2` | `#ffffff` |
+| `--bg3` | `#fafafa` |
+| `--border` | `#d4dcc8` |
+| `--amber` | `#7cb342` |
+| `--amber2` | `#9ccc65` |
+| `--teal` | `#81c784` |
+| `--muted` | `#8a9a7e` |
+| `--text` | `#4a5a3e` |
+| `--white` | `#2e3d24` |
+| `--nav-bg` | `rgba(250,248,244,0.85)` |
+| `--glow` | `rgba(124,179,66,0.05)` |
+| `--map-stat-bg` | `rgba(255,255,255,0.3)` |
+| `--neighborhood-gradient-end` | `#fafafa` |
+| `--terminal-bg` | `var(--bg3)` |
+| `--terminal-green` | `var(--teal)` |
+| `--amber-border` | `rgba(124,179,66,0.2)` |
+| `--teal-border` | `rgba(129,199,132,0.3)` |
+| `--amber-border-tag` | `rgba(124,179,66,0.3)` |
+| `--quote-bg` | `rgba(124,179,66,0.08)` |
+| `--mono` | `'Space Mono', monospace` |
+| `--sans` | `'Syne', sans-serif` |
+| `--arabic` | `'Noto Kufi Arabic', sans-serif` |
+
+Note: Font variables (`--mono`, `--sans`, `--arabic`) are the same for both themes.
