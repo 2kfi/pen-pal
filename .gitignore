@@ -37,6 +37,8 @@ yarn-error.log*
 public/chess.js
 dist/
 build/
+client/dist/
+client/node_modules/
 
 # Vite/React
 *.local

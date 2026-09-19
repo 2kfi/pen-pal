@@ -1,14 +1,14 @@
 {
   "name": "pen-pal-archive",
-  "version": "1.0.0",
+  "version": "0.0.2",
   "description": "Private encrypted letter exchange app inspired by Slowly",
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
     "dev": "node server/index.js",
-    "lint": "echo 'Linting...'",
-    "test": "echo 'Tests passed'",
-    "build": "echo 'Build complete'"
+    "lint": "node --check server/index.js && node --check server/db.js && node --check server/jellyfin.js && node --check server/config.js",
+    "test": "vitest run",
+    "build": "node --check server/index.js && node --check server/db.js"
   },
   "keywords": ["letters", "encryption", "e2e", "pen-pal"],
   "author": "",
@@ -17,12 +17,18 @@
   "dependencies": {
     "axios": "^1.13.6",
     "bcryptjs": "^3.0.3",
+    "better-sqlite3": "^11.10.0",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
+    "express-rate-limit": "^7.5.1",
+    "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
-    "sql.js": "^1.13.0",
     "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "supertest": "^7.1.4",
+    "vitest": "^3.2.4"
   }
 }

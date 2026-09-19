@@ -1,29 +1,23 @@
-# Use Node.js LTS
+# Build client (React/Vite)
+FROM node:20 AS client-build
+WORKDIR /app/client
+COPY client/package*.json ./
+RUN npm ci
+COPY client/ ./
+RUN npm run build
+
+# Runtime: backend + built frontend, no build tools
 FROM node:20-slim
-
-# Install dependencies for better-sqlite3 native build (if needed)
-RUN apt-get update && apt-get install -y python3 make g++ && rm -rf /var/lib/apt/lists/*
-
-# Create app directory
-WORKDIR /usr/src/app
-
-# Install dependencies
+WORKDIR /app
 COPY package*.json ./
-RUN npm install
-
-# Copy app source
-COPY . .
-
-# Create data and uploads directory
-RUN mkdir -p data uploads && chmod 777 data uploads
-
-# Expose port
-EXPOSE 3000
-
-# Set environment variables
+RUN npm ci --omit=dev
+COPY server/ ./server/
+COPY public/ ./public/
+COPY --from=client-build /app/client/dist ./client/dist
+RUN mkdir -p data uploads && chown -R node:node /app/data /app/uploads && chmod 755 /app/data /app/uploads
+USER node
 ENV PORT=3000
-ENV JWT_SECRET=change-this-to-a-secure-random-secret
 ENV NODE_ENV=production
-
-# Start the server
-CMD [ "node", "server/index.js" ]
+EXPOSE 3000
+HEALTHCHECK --interval=30s --timeout=5s CMD node -e "fetch('http://localhost:3000/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+CMD ["node", "server/index.js"]

@@ -13,43 +13,38 @@ A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slo
 - **Profile**: Customizable display name, bio, age, birthday, favorite food.
 - **Notifications**: Real-time alerts for pairing requests and letters.
 
-## Tech Stack
+## Architecture (v2)
 
-- **Frontend**: React 18+, TypeScript, Vite, Zustand, React Router
-- **Backend**: Node.js, Express, sql.js (SQLite), Axios
-- **Styling**: CSS with theme variables from colors.md
-- **Storage**: IndexedDB (client), SQLite (server)
-- **Security**: RSA-OAEP (2048-bit), AES-GCM (256-bit), PBKDF2
+- **client/**: React 18 + TypeScript + Vite + Zustand + React Router. Dev on :5173 (proxies `/api` to :3000); prod build output `client/dist/` is served by the backend.
+- **server/**: Node.js + Express + better-sqlite3 (WAL). Serves `client/dist` if built, plus `/uploads` and `public/`.
+- **Prod**: single-host Docker (`Dockerfile` multi-stage + `docker-compose.yml`), SQLite in `./data`, uploads in `./uploads`.
 
 ## Quick Start
 
 ```bash
-# Clone & install
+# Backend deps + dev server (:3000)
 npm install
-
-# Run development server
 npm start
+
+# Frontend dev (:5173, proxies /api to :3000)
+npm --prefix client install
+npm --prefix client run dev
 ```
 
-Visit http://localhost:3000
+Visit http://localhost:5173 (dev) or http://localhost:3000 (backend).
 
-## Deployment
-
-### Docker
+### Docker (prod, single host)
 
 ```bash
-# Build
-docker build -t pen-pal-archive .
-
-# Run
-docker run -d \
-  -p 3000:3000 \
-  --name pen-pal \
-  -v $(pwd)/data:/usr/src/app/data \
-  -v $(pwd)/uploads:/usr/src/app/uploads \
-  -e JWT_SECRET=$(openssl rand -base64 32) \
-  pen-pal
+cp .env.example .env   # set JWT_SECRET (openssl rand -base64 32)
+docker compose up -d --build
 ```
+
+Or one-click: `sudo bash install.sh` (generates JWT_SECRET once if missing).
+
+### Deployment
+
+Single-host prod: `docker compose up -d --build` (builds client + server image, persists `./data` and `./uploads`, reads `.env`).
 
 ### One-Click Install
 
@@ -74,8 +69,12 @@ USER_ID=your-jellyfin-user-id
 | Variable | Default | Description |
 |----------|---------|-------------|
 | PORT | 3000 | Server port |
-| JWT_SECRET | (random) | Secret for JWT signing |
-| NODE_ENV | production | Set to "development" for debug |
+| JWT_SECRET | (required) | Secret for JWT signing; server refuses to boot in prod if missing/default |
+| CORS_ORIGIN | same-origin in prod, open in dev | Comma-separated allowed origins |
+| JELLYFIN_URL | — | Jellyfin server URL (optional media integration) |
+| JELLYFIN_KEY | — | Jellyfin API key |
+| JELLYFIN_USER_ID | — | Jellyfin user ID |
+| ADMIN_TOKEN | — | Enables `POST /api/admin/reset-db` (non-prod only) |
 
 ## Theme System
 
@@ -101,6 +100,7 @@ Toggle themes in Settings or via the `easter-egg-active` CSS class.
 
 ## API Endpoints
 
+- `GET /healthz` - Health check (`{ ok: true }`)
 - `POST /api/signup` - Create account
 - `POST /api/login` - Login
 - `GET /api/me` - Get current user
@@ -108,10 +108,13 @@ Toggle themes in Settings or via the `easter-egg-active` CSS class.
 - `POST /api/pairing/request` - Send pairing request
 - `GET /api/pairing/status` - Get pairing status
 - `POST /api/pairing/accept` - Accept pairing
+- `POST /api/pairing/reject` - Reject pairing
+- `DELETE /api/pairs/unpair` - Remove current pair
 - `POST /api/letters/send` - Send encrypted letter
-- `GET /api/letters/sync` - Get all letters
+- `GET /api/letters/sync?limit=&cursor=` - Get letters (cursor pagination, max 100/page)
 - `POST /api/photos/upload` - Upload photo
-- `GET /api/notifications` - Get notifications
+- `GET /api/notifications?limit=&cursor=` - Get notifications (cursor pagination)
+- `PUT /api/notifications/read` - Mark all as read
 
 ## License
 

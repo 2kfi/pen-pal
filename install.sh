@@ -1,11 +1,8 @@
 #!/bin/bash
-# install.sh for PenPal Archive
-
+# install.sh for PenPal Archive (single-host Docker prod)
 set -e
-
 echo "Installing PenPal Archive..."
 
-# Check if Docker is installed
 if ! command -v docker &> /dev/null; then
     echo "Docker not found. Installing Docker..."
     curl -fsSL https://get.docker.com -o get-docker.sh
@@ -13,13 +10,16 @@ if ! command -v docker &> /dev/null; then
     rm get-docker.sh
 fi
 
-# Build and Run
-docker build -t pen-pal-archive .
-docker run -d \
-  -p 3000:3000 \
-  --name pen-pal-archive \
-  -v $(pwd)/data:/usr/src/app/data \
-  -e JWT_SECRET=$(openssl rand -base64 32) \
-  pen-pal-archive
+# Generate JWT_SECRET once if missing
+if [ ! -f .env ]; then
+    cp .env.example .env
+fi
+if grep -q "change-me" .env; then
+    SECRET=$(openssl rand -base64 32)
+    # ponytail: sed in place, no extra deps
+    sed -i "s|^JWT_SECRET=.*|JWT_SECRET=${SECRET}|" .env
+    echo "Generated JWT_SECRET in .env"
+fi
 
+docker compose up -d --build
 echo "PenPal Archive is now running on http://localhost:3000"

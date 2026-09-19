@@ -7,6 +7,17 @@ A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slo
 
 ## Version History
 
+### v2.0.0 - React client + prod Docker + fail-closed CI (2026-09-19)
+
+- **Frontend**: React 18 + TypeScript + Vite client in `client/` (Zustand, React Router); backend serves `client/dist` in prod with SPA fallback.
+- **Docker**: multi-stage build (node:20 client build → node:20-slim runtime), non-root `node` user, no build tools, 755 `data/`+`uploads/` owned by `node`, no baked secrets, `HEALTHCHECK` on `/healthz`, single-host `docker-compose.yml` with `./data`+`./uploads` volumes, `.env` file, `restart: unless-stopped`.
+- **install.sh**: `docker compose up -d --build`; generates `JWT_SECRET` via openssl once if missing.
+- **CI**: fail-closed (no `continue-on-error`); jobs lint (backend lint + client `tsc`), test (backend + client vitest), build (both), docker build without push on PR; GHCR push + SSH deploy stay on main pushes.
+- **API**: `POST /api/pairing/reject`, `DELETE /api/pairs/unpair`, cursor pagination on letters/notifications (`limit`, `cursor`), `GET /healthz`.
+- **Docs**: `.env.example` (JWT_SECRET, CORS_ORIGIN, JELLYFIN_URL/KEY/USER_ID, ADMIN_TOKEN, PORT); README v2 arch/quick-start/env/API; `.gitignore` covers `client/dist`, `client/node_modules`.
+
+---
+
 ### v1.1.0 - Bug Fixes & DB Reset (2026-03-31)
 
 #### Critical Fixes
