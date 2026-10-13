@@ -1,13 +1,21 @@
 import { useEffect, useState } from 'react';
 import { usePairing } from '../stores/pairing';
-import { CheckIcon, InboxIcon, UnlinkIcon, XIcon } from '../components/Icons';
+import Field from '../components/Field';
 
+/**
+ * Pairing.
+ *
+ * Rebuilt against the token system: no inline styles, no icon font, real labels.
+ * The PID is the only handle two strangers have on each other, so it gets the
+ * postmark treatment and a copy button rather than being buried in a sentence.
+ */
 export default function Pairing() {
   const { incoming, outgoing, partner, myPid, loading, error, refresh, request, accept, reject, unpair } =
     usePairing();
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     void refresh();
@@ -20,74 +28,121 @@ export default function Pairing() {
       await fn();
       setMsg(ok);
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : 'Failed');
+      setMsg(e instanceof Error ? e.message : 'Something went wrong.');
     } finally {
       setBusy(false);
     }
   };
 
+  const copyPid = async () => {
+    if (!myPid) return;
+    try {
+      await navigator.clipboard.writeText(myPid);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard access can be denied; the PID is on screen either way.
+      setMsg('Copying is blocked in this browser — type your PID out instead.');
+    }
+  };
+
   return (
-    <div className="card">
-      <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        <InboxIcon /> Invite — Pairing
-      </h1>
-      <p className="muted">My PID: {myPid ?? (loading ? '…' : 'unknown')}</p>
+    <div className="stack">
+      <h1>Your pen pal</h1>
 
-      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
-        <input
-          aria-label="Target PID"
-          placeholder="TARGET PID"
-          value={target}
-          onChange={(e) => setTarget(e.target.value.toUpperCase())}
-          style={{ textTransform: 'uppercase' }}
-        />
-        <button
-          className="primary"
-          disabled={busy || !target.trim()}
-          onClick={() => void run(() => request(target.trim()), 'Invite sent').then(() => setTarget(''))}
-        >
-          Send invite
-        </button>
-      </div>
-
-      <h2>Incoming ({incoming.length})</h2>
-      {incoming.map((r) => (
-        <div key={r.id} style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <span>
-            {r.username} ({r.pid})
-          </span>
-          <button disabled={busy} onClick={() => void run(() => accept(r.id), 'Accepted')} aria-label={`Accept ${r.username}`}>
-            <CheckIcon size={16} />
-          </button>
-          <button disabled={busy} onClick={() => void run(() => reject(r.id), 'Rejected')} aria-label={`Reject ${r.username}`}>
-            <XIcon size={16} />
+      <section className="card section">
+        <h2>Your PID</h2>
+        <p className="muted">Anyone with this can send you an invite. It is the only way two strangers find each other here.</p>
+        <div className="row">
+          <span className="pid-badge">{myPid ?? (loading ? '…' : 'unknown')}</span>
+          <button type="button" onClick={() => void copyPid()} disabled={!myPid}>
+            {copied ? 'Copied' : 'Copy'}
           </button>
         </div>
-      ))}
-      {incoming.length === 0 && <p className="muted">No incoming invites.</p>}
+      </section>
 
-      <h2>Outgoing ({outgoing.length})</h2>
-      {outgoing.map((o) => (
-        <p key={o.id} className="muted">
-          {o.target_pid} — {o.status}
-        </p>
-      ))}
-
-      <h2>Partner</h2>
       {partner ? (
-        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-          <span>
-            {partner.friendly_name ?? partner.username} ({partner.pid})
-          </span>
-          <button disabled={busy} onClick={() => void run(() => unpair(), 'Unpaired')} aria-label="Unpair">
-            <UnlinkIcon size={16} />
-          </button>
-        </div>
+        <section className="card section">
+          <h2>Writing to</h2>
+          <div className="row">
+            <span className="partner-name">{partner.friendly_name || partner.username}</span>
+            <span className="postmark">{partner.pid}</span>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void run(() => unpair(), 'You are unpaired.')}
+            >
+              Unpair
+            </button>
+          </div>
+          <p className="muted">You write to one person at a time. Unpair before inviting someone else.</p>
+        </section>
       ) : (
-        <p className="muted">Not paired.</p>
+        <section className="card section">
+          <h2>Invite someone</h2>
+          <Field
+            id="target-pid"
+            label="Their PID"
+            value={target}
+            onChange={(v) => setTarget(v.toUpperCase().trim())}
+            maxLength={6}
+            placeholder="ABC123"
+            hint="Six characters, letters and numbers."
+          />
+          <button
+            className="primary"
+            type="button"
+            disabled={busy || target.length !== 6}
+            onClick={() =>
+              void run(async () => {
+                await request(target);
+                setTarget('');
+              }, 'Invite sent.')
+            }
+          >
+            Send invite
+          </button>
+        </section>
       )}
 
-      {(error || msg) && <p className="muted">{error || msg}</p>}
+      <section className="card section">
+        <h2>Invitations ({incoming.length})</h2>
+        {incoming.length === 0 && <p className="muted">No one has invited you yet.</p>}
+        {incoming.map((r) => (
+          <div key={r.id} className="row invite-row">
+            <span className="partner-name">{r.friendly_name || r.username}</span>
+            <span className="postmark">{r.pid}</span>
+            <button
+              className="primary"
+              type="button"
+              disabled={busy}
+              onClick={() => void run(() => accept(r.id), 'Paired.')}
+            >
+              Accept
+            </button>
+            <button type="button" disabled={busy} onClick={() => void run(() => reject(r.id), 'Declined.')}>
+              Decline
+            </button>
+          </div>
+        ))}
+      </section>
+
+      {!partner && outgoing.length > 0 && (
+        <section className="card section">
+          <h2>Sent ({outgoing.length})</h2>
+          {outgoing.map((o) => (
+            <p key={o.id} className="muted">
+              <span className="postmark">{o.target_pid}</span> — {o.status}
+            </p>
+          ))}
+        </section>
+      )}
+
+      {(error || msg) && (
+        <p className={error ? 'alert' : 'muted'} role={error ? 'alert' : 'status'}>
+          {error || msg}
+        </p>
+      )}
     </div>
   );
 }

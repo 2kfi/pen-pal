@@ -25,6 +25,9 @@ jobs:
       - name: Lint backend
         run: npm run lint
 
+      - name: Check design tokens (contrast)
+        run: npm run design:check
+
       - name: Install client dependencies
         run: npm ci --prefix client
 

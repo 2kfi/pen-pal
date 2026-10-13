@@ -22,6 +22,11 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  /* WCAG 2.2 SC 2.4.11 Focus Not Obscured (AA). The topbar is sticky and, on
+     phones, the tab bar is fixed, so scrolling to a focused control would
+     otherwise park it underneath author-created chrome. */
+  scroll-padding-top: calc(var(--space-6) + var(--space-4));
+  scroll-padding-bottom: calc(64px + var(--space-5) + env(safe-area-inset-bottom));
 }
 
 body {
@@ -302,10 +307,11 @@ button {
   padding: 0 var(--space-4);
   background: var(--paper-2);
   color: var(--text);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   font-family: var(--font-postmark);
   font-size: var(--type-sm);
+  white-space: nowrap;
   cursor: pointer;
   transition: border-color var(--duration-fast) var(--ease),
     background-color var(--duration-fast) var(--ease);
@@ -318,6 +324,41 @@ button:hover:not(:disabled) {
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* A router Link that looks like a button. Nesting <button> inside <a> is invalid
+   HTML and produces two nested interactive elements in the accessibility tree. */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  color: var(--text);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+a.button:hover {
+  border-color: var(--muted);
+}
+
+a.button.primary {
+  background: var(--wax);
+  border-color: var(--wax);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+a.button.primary:hover {
+  background: var(--wax-bright);
+  border-color: var(--wax-bright);
 }
 
 button.primary {
@@ -355,7 +396,7 @@ textarea {
   padding: var(--space-3);
   background: var(--paper-2);
   color: var(--text);
-  border: 1px solid var(--rule);
+  border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
   font-family: var(--font-reading);
   line-height: var(--leading-reading);
@@ -621,4 +662,79 @@ textarea {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+/* ------------------------------------------------------------------ *
+ * page shells                                                        *
+ * ------------------------------------------------------------------ */
+.compose,
+.letter-read,
+.play {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.compose h1,
+.letter-read h1,
+.play h1 {
+  margin-bottom: 0;
+}
+
+/* Letter metadata and status always sit above the letter itself. */
+.letter-read .reader {
+  margin-top: var(--space-2);
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.section + .section {
+  margin-top: var(--space-4);
+}
+
+.pid-input {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-family: var(--font-postmark);
+}
+
+.pid-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper-2);
+  font-family: var(--font-postmark);
+  font-size: var(--type-md);
+  letter-spacing: 0.14em;
+  color: var(--wax);
+}
+
+.partner-name {
+  font-weight: 600;
+}
+
+.invite-row + .invite-row {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
 }

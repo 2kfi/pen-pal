@@ -17,7 +17,11 @@
   --ink: #0a0a0c;
   --paper: #14161a;
   --paper-2: #1c1f25;
-  --rule: #2a2f38;
+  /* Two border weights. --rule is a decorative divider; --rule-strong outlines
+     anything interactive and clears WCAG 2.2 SC 1.4.11 (3:1 non-text contrast).
+     Using one token for both means either loud dividers or invisible controls. */
+  --rule: #363c47;
+  --rule-strong: #5a6474;
 
   --wax: #e8a020;
   --wax-bright: #f5c048;
@@ -41,12 +45,14 @@
   --ink: #f4f1ea;
   --paper: #fbf9f4;
   --paper-2: #ffffff;
-  --rule: #dcd6c8;
+  --rule: #cfc6b2;
+  --rule-strong: #98896a;
 
-  /* #b45309, not #7cb342. The old amber failed AA on this background and the
-     "fix" was to add a second accent token for text. Fixed at the source. */
-  --wax: #b45309;
-  --wax-bright: #92400e;
+  /* #a8490a, not #b45309: that measured 4.45:1 against --ink, just under AA.
+     Not #7cb342 either — the old amber failed badly and the "fix" was to add a
+     second accent token used only for text. Fixed at the source instead. */
+  --wax: #a8490a;
+  --wax-bright: #7c3007;
   --in-transit: #0f766e;
   --danger: #b91c1c;
 

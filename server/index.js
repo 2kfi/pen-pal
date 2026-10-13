@@ -264,7 +264,7 @@ app.post('/api/pairing/request', authenticateToken, (req, res) => {
 
 app.get('/api/pairing/status', authenticateToken, (req, res) => {
   const db = getDb();
-  const incoming = db.prepare(`SELECT p.id, u.username, u.pid FROM pairings p JOIN users u ON p.requester_id = u.id WHERE p.target_pid = ? AND p.status = 'pending'`).all(req.user.pid);
+  const incoming = db.prepare(`SELECT p.id, u.username, u.friendly_name, u.pid FROM pairings p JOIN users u ON p.requester_id = u.id WHERE p.target_pid = ? AND p.status = 'pending'`).all(req.user.pid);
   const outgoing = db.prepare('SELECT id, target_pid, status FROM pairings WHERE requester_id = ?').all(req.user.id);
   const currentPairRow = currentPair(db, req.user.id);
 

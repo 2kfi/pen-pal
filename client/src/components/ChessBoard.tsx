@@ -182,7 +182,7 @@ export function ChessBoard() {
         </p>
       )}
 
-      <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+      <div className="row">
         <button type="button" onClick={reset}>
           New game
         </button>

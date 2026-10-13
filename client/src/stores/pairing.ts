@@ -4,6 +4,7 @@ import { api } from '../lib/api';
 export interface PairRequest {
   id: number;
   username: string;
+  friendly_name?: string | null;
   pid: string;
 }
 export interface OutgoingRequest {

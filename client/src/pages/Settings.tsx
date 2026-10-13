@@ -32,9 +32,9 @@ export default function Settings() {
     <div>
       <h1>Settings</h1>
 
-      <section className="card" style={{ marginBottom: 'var(--space-4)' }}>
+      <section className="card section">
         <h2>Theme</h2>
-        <div role="radiogroup" aria-label="Theme" style={{ display: 'flex', gap: 'var(--space-2)' }}>
+        <div role="radiogroup" aria-label="Theme" className="row">
           <button
             type="button"
             role="radio"
@@ -58,7 +58,7 @@ export default function Settings() {
             inconsistent variables and no way to tell which were legible. */}
       </section>
 
-      <section className="card" style={{ marginBottom: 'var(--space-4)' }}>
+      <section className="card section">
         <h2>Your profile</h2>
         <div className="field">
           <label htmlFor="display-name">Display name</label>

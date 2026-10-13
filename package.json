@@ -7,6 +7,7 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "lint": "node --check server/index.js && node --check server/db.js",
+    "design:check": "node tools/check-contrast.mjs",
     "test": "vitest run",
     "build": "node --check server/index.js && node --check server/db.js"
   },

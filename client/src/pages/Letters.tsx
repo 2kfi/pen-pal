@@ -109,11 +109,9 @@ export default function Letters() {
     <div>
       <h1>Your archive</h1>
 
-      <div style={{ marginBlock: 'var(--space-4)' }}>
-        <Link to="/letters/new" className="btn-primary-link">
-          <button className="primary" type="button">
-            Write a letter
-          </button>
+      <div className="page-actions">
+        <Link to="/letters/new" className="button primary">
+          Write a letter
         </Link>
       </div>
 
