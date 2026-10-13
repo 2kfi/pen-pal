@@ -103,6 +103,11 @@ export default function Compose() {
     e.preventDefault();
     setError('');
 
+    // A disabled button does not stop the browser submitting the form from
+    // another field, so a second submit can still arrive mid-send. One letter,
+    // one animation: refuse the duplicate rather than post it.
+    if (busy) return;
+
     if (!partner) {
       setError('You are not writing to anyone yet. Send an invite first.');
       return;

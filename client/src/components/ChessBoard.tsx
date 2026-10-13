@@ -275,7 +275,9 @@ export function ChessBoard() {
     setCursor(move.to);
 
     if (res !== 'playing') {
-      setStatus(`${san}. ${verdictOf(res, next.turn).text}`);
+      // The verdict line above already states the result. Repeating it here
+      // would print it twice on the page and read it twice in a live region.
+      setStatus(`${san}.`);
       tick(res === 'checkmate' ? 'check' : 'move');
       return;
     }

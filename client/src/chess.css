@@ -191,12 +191,12 @@
 }
 
 .cb-piece--w,
-.cb-loose--w {
+.cb-loose.cb-piece--w {
   color: var(--cb-white-piece);
 }
 
 .cb-piece--b,
-.cb-loose--b {
+.cb-loose.cb-piece--b {
   color: var(--cb-black-piece);
 }
 
@@ -228,6 +228,26 @@
 .cb-coord--file {
   right: 3px;
   bottom: 2px;
+}
+
+/* The non-colour half of the check signal: a badge in the corner of the king's
+   square. Without it the state is carried by one hue and one hue only. */
+.cb-check-mark {
+  position: absolute;
+  z-index: 3;
+  top: 2px;
+  right: 2px;
+  display: grid;
+  place-items: center;
+  width: 1.15rem;
+  height: 1.15rem;
+  border-radius: var(--radius-chip);
+  background: var(--danger);
+  color: var(--ink);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  line-height: 1;
 }
 
 /* ------------------------------------------------------------------ *
@@ -500,6 +520,17 @@
  * ------------------------------------------------------------------ */
 
 .cb-ghost {
+  /* The ghost is portalled to <body>, so it is no longer a descendant of .cb
+     and inherits none of the custom properties above. They are repeated here
+     rather than hoisted to :root, because they describe the board's pieces and
+     nothing else on the page has any use for them. Without this the dragged
+     piece silently reverts to body font-size and body colour. */
+  --cb-light-sq: var(--paper-2);
+  --cb-dark-sq: var(--ink);
+  --cb-white-piece: var(--text);
+  --cb-black-piece: var(--muted);
+  --cb-piece-size: clamp(1.35rem, 7.4vw, 2.5rem);
+
   position: fixed;
   top: 0;
   left: 0;
@@ -514,6 +545,16 @@
   opacity: 0.95;
 }
 
+[data-theme='light'] .cb-ghost {
+  --cb-dark-sq: var(--rule);
+}
+
+@media (min-width: 640px) {
+  .cb-ghost {
+    --cb-piece-size: clamp(1.5rem, 3.6vw, 2.5rem);
+  }
+}
+
 /* ------------------------------------------------------------------ *
  * viewport                                                           *
  * ------------------------------------------------------------------ */
@@ -524,6 +565,9 @@
 @media (max-width: 639.98px) {
   .cb-frame {
     width: calc(100% + 2 * var(--space-4));
+    /* max-width: 100% from the base rule would clamp this straight back to the
+       content box and undo the whole point of the bleed. */
+    max-width: none;
     margin-inline: calc(-1 * var(--space-4));
   }
 

@@ -36,7 +36,12 @@ body {
   font-family: var(--font-reading);
   font-size: var(--type-base);
   line-height: var(--leading-reading);
-  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+  /* The mobile tab bar is FIXED, and it is taller than the 44px of tabs: it also
+     carries the theme and sign-out buttons above them. v0.0.2-era CSS reserved
+     only 64px here, so on a 375px viewport the bar sat on top of the page's own
+     controls and the "Sound" button was unreachable.
+     Reserve for the real thing and let the bar measure itself. */
+  padding-bottom: calc(var(--nav-h, 64px) + env(safe-area-inset-bottom));
 }
 
 /* Links inherit the reading colour. Without this they render as UA-default blue
@@ -235,6 +240,14 @@ p {
 
   /* Column, not column-reverse: actions on top, tabs underneath. Explicit DOM
      order beats fighting `order` against a reversed flex direction. */
+  /* Two rows (actions + tabs) plus padding. Declared on :root, NOT on .topbar:
+     custom properties inherit downward, so a value set on the bar is invisible
+     to <body>, which is the element that needs to reserve the space.
+     Safe-area is excluded here because body adds it separately. */
+  :root {
+    --nav-h: calc(var(--target-min) + 36px + var(--space-2) * 2);
+  }
+
   .topbar-inner {
     flex-direction: column;
     gap: var(--space-1);
@@ -720,8 +733,8 @@ textarea {
 }
 
 /* The rule in §6 again, enforced at the stylesheet as well as in JS: for these
-   users the moment is absent, not shortened. Compose does not mount the stage
-   at all; if it were ever mounted, nothing of it may be drawn. */
+   users the moment is absent, not shortened. Compose never asks for the stage;
+   if it were ever mounted anyway, nothing of it may be drawn. */
 @media (prefers-reduced-motion: reduce) {
   .seal-stage {
     display: none;

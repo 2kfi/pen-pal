@@ -13,8 +13,9 @@
  *    change — *absent*, not shortened. tokens.css already collapses every CSS
  *    transition for those users; GSAP writes inline transforms and is invisible
  *    to that rule, so the same query is checked here in JS and the moment is
- *    skipped outright. Both checks live: Compose skips mounting the stage, and
- *    this effect settles immediately if it is somehow reached anyway.
+ *    skipped outright. Both checks live: the caller never sets `moment`, so the
+ *    stage is never in the DOM — and this effect settles immediately if it is
+ *    somehow reached anyway.
  *
  * 2. The motion is decorative. The stage is `aria-hidden`, holds no focusable
  *    content, and is `pointer-events: none`, so it can neither steal focus nor
@@ -119,11 +120,19 @@ export default function SealAnimation({ moment, originRef, onSettled }: SealAnim
       // The letter leaves from the button's trailing edge, never from on top of
       // it — the button keeps saying "Sealing…" for the whole moment, and a
       // letter that hides the control which sent it is a worse story anyway.
+      // On a phone the row is narrow and there is no room beside the button, so
+      // the letter drops below it and travels right across the empty page
+      // instead. Both are anchored to the action; neither covers it.
+      const fitsBeside = !!origin && origin.right + box.width <= vw;
       const startX = origin
-        ? Math.max(0, Math.min(origin.right, vw - box.width))
+        ? fitsBeside
+          ? origin.right
+          : Math.min(origin.left, vw - box.width)
         : 0;
       const startY = origin
-        ? origin.top + origin.height / 2 - box.height / 2
+        ? fitsBeside
+          ? origin.top + origin.height / 2 - box.height / 2
+          : origin.bottom
         : vh / 2 - box.height / 2;
 
       const tl = gsap.timeline({ onComplete: done });
@@ -156,10 +165,12 @@ export default function SealAnimation({ moment, originRef, onSettled }: SealAnim
             },
             (FOLD_MS - 20) / 1000,
           )
-          // 3. And away. Accelerating, so it leaves rather than slides.
+          // 3. And away. Accelerating, so it leaves rather than slides, with
+          //    just enough lift on the leading edge that it reads as a thing
+          //    being tossed rather than a box being translated.
           .to(
             envelope,
-            { x: offscreen, duration: SEND_MS / 1000, ease: 'power2.in' },
+            { x: offscreen, rotation: -3, duration: SEND_MS / 1000, ease: 'power2.in' },
             (FOLD_MS + PRESS_MS - 20) / 1000,
           )
           // The route is consumed by the letter that is running along it.

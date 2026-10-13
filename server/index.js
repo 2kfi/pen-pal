@@ -81,9 +81,37 @@ if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true, mode
 // `file.mimetype` — that value is the client's own Content-Type header.
 const { photoUpload, processUpload, thumbUrlFor } = require('./uploads');
 
-const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
-app.use('/api/login', authLimiter);
-app.use('/api/signup', authLimiter);
+// Behind a reverse proxy every request arrives with the PROXY's address unless
+// Express is told to trust the forwarding headers. Without this, express-rate-limit
+// keys every request in the instance to a single IP: one person tripping the
+// limit locks out their pen pal, and nobody can ever sign up again.
+//
+// Set TRUST_PROXY=1 when running behind Caddy/nginx (see docs/SELF-HOSTING.md).
+if (process.env.TRUST_PROXY) {
+  const hops = Number(process.env.TRUST_PROXY);
+  app.set('trust proxy', Number.isFinite(hops) && hops > 0 ? hops : 1);
+}
+
+// These limits are sized for a SELF-HOSTED instance where the user population
+// is small and known, not for public multi-tenant SaaS. The v0.0.2 value of
+// 30/15min was a SaaS default applied to an app whose entire premise is that
+// there are a handful of people on it.
+const AUTH_WINDOW_MS = Number(process.env.AUTH_RATE_WINDOW_MS || 15 * 60 * 1000);
+const SIGNUP_MAX = Number(process.env.SIGNUP_RATE_MAX || 120);
+const LOGIN_MAX = Number(process.env.LOGIN_RATE_MAX || 60);
+const WRITE_MAX = Number(process.env.WRITE_RATE_MAX || 300);
+
+const common = { windowMs: AUTH_WINDOW_MS, standardHeaders: true, legacyHeaders: false };
+app.post('/api/login', rateLimit({ ...common, limit: LOGIN_MAX }));
+app.post('/api/signup', rateLimit({ ...common, limit: SIGNUP_MAX }));
+
+/**
+ * Keyed on the authenticated user id where there is one, so an entire household
+ * behind a single NAT address does not throttle itself. Falls back to the
+ * client IP for unauthenticated routes.
+ */
+const perUser = (limit) =>
+  rateLimit({ ...common, limit, keyGenerator: (req) => req.user?.id ?? req.ip });
 
 function generatePID() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -219,7 +247,7 @@ function currentPair(db, userId) {
   return db.prepare('SELECT * FROM pairs WHERE user_id = ?').get(userId);
 }
 
-app.post('/api/pairing/request', authenticateToken, (req, res) => {
+app.post('/api/pairing/request', authenticateToken, perUser(WRITE_MAX), (req, res) => {
   const { targetPid } = req.body || {};
   const bad = checkStr(targetPid, { required: true, min: 1, max: 16 });
   if (bad) return res.status(400).json({ error: `Invalid pairing body: ${bad}` });
@@ -328,7 +356,7 @@ app.delete('/api/pairs/unpair', authenticateToken, (req, res) => {
   }
 });
 
-app.post('/api/letters/send', authenticateToken, (req, res) => {
+app.post('/api/letters/send', authenticateToken, perUser(WRITE_MAX), (req, res) => {
   const { recipientId, encryptedContent, encryptedMetadata, deliveredAt } = req.body || {};
   if (!Number.isInteger(recipientId)) return res.status(400).json({ error: 'recipientId must be an integer' });
   const bad = checkStr(encryptedContent, { required: true, min: 1, max: 1000000 });
@@ -384,7 +412,7 @@ app.get('/api/letters/sync', authenticateToken, (req, res) => {
 // Everything about this route is delegated to the pipeline in server/uploads.js.
 // The response shape is unchanged (`id`, `url`) plus `thumbUrl`, so the existing
 // client keeps working.
-app.post('/api/photos/upload', authenticateToken, (req, res) => {
+app.post('/api/photos/upload', authenticateToken, perUser(WRITE_MAX), (req, res) => {
   photoUpload.single('photo')(req, res, async (err) => {
     if (err || !req.file) {
       const status = err instanceof multer.MulterError ? 400 : err?.status || 400;
