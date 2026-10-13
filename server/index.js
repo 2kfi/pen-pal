@@ -113,39 +113,18 @@ app.post('/api/signup', rateLimit({ ...common, limit: SIGNUP_MAX }));
 const perUser = (limit) =>
   rateLimit({ ...common, limit, keyGenerator: (req) => req.user?.id ?? req.ip });
 
-function generatePID() {
-  return Math.random().toString(36).substring(2, 8).toUpperCase();
-}
 
 /**
  * A syntactically valid bcrypt hash of a value nobody can supply, used to spend the
  * same CPU on the "user does not exist" path as on a real verification. Without it
  * a missing account responds noticeably faster than a wrong password.
  */
-const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
-// Manual validation (no new deps): returns error string or null
-function checkStr(v, { required = false, min = 0, max = 1024 } = {}) {
-  if (v === undefined || v === null) return required ? 'missing required field' : null;
-  if (typeof v !== 'string') return 'must be a string';
-  if (v.length < min) return `must be at least ${min} chars`;
-  if (v.length > max) return `must be at most ${max} chars`;
-  return null;
-}
 
 // DB is synchronous (better-sqlite3); init once at boot.
 initDB();
 
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
-  if (!token) return res.sendStatus(401);
-  jwt.verify(token, SECRET, (err, user) => {
-    if (err) return res.sendStatus(403);
-    req.user = user;
-    next();
-  });
-};
+const { authenticateToken, checkStr, generatePID, DUMMY_HASH } = require('./lib/auth');
 
 app.get('/healthz', (req, res) => res.status(200).json({ ok: true }));
 
