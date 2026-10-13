@@ -3,20 +3,22 @@ import { ChessBoard } from '../components/ChessBoard';
 /**
  * Play.
  *
- * v0.0.2 rendered a disabled button reading "Play with a friend — not available yet",
- * next to a solo board whose engine could not castle, could not en passant, forced
- * promotion to queen, and ran a depth-2 material-only search on the main thread.
+ * The board is backed by a perft-verified rules engine, so castling, en passant,
+ * under-promotion and draw detection all work. There is no opponent engine yet —
+ * v0.0.2 shipped a depth-2 material-only search that ran on the main thread and
+ * froze the UI. Search in a Web Worker is plan step 25.
  *
- * Playing *with your pen pal* is a plan step, not a lie we tell the user about.
- * Until it ships the surface says so plainly instead of advertising a dead control.
+ * Until then this is a two-player board, and the page says so rather than
+ * advertising a computer opponent that does not exist.
  */
 export default function Play() {
   return (
     <div className="play">
       <h1>Play</h1>
       <p className="muted">
-        A game of chess against your pen pal. Moves are sealed like letters, so neither of you
-        can peek at a position the other has not sent.
+        Chess for two. Take back a move if you misclick. Playing against your pen pal over the
+        wire is next — moves will be sealed like letters so neither of you can peek at a position
+        the other has not sent.
       </p>
 
       <ChessBoard />
