@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { v4: uuidv4 } = require('uuid');
 const { initDB, getDb, resetDB, closeDB } = require('./db');
 
 const app = express();
@@ -68,39 +67,19 @@ app.use(express.json({ limit: '1mb' }));
 // served. There is now exactly one app.
 
 const uploadsDir = path.join(__dirname, '../uploads');
-if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+// 0700: these are plaintext photos and only the app's own process ever reads them.
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o700 });
 // NOTE: the /uploads static mount is registered further down, *after* auth is
 // defined. v0.0.2 served it world-readable at /uploads/<uuid>, which put every
 // uploaded photo in plaintext on a public URL and contradicted the app's entire
 // E2E promise.
 
-// Only these raster formats are accepted. SVG is deliberately excluded: it is an
-// XML document that can carry <script>, so an uploaded .svg served from our own
-// origin is a stored-XSS primitive. `file.mimetype` comes from the client's
-// Content-Type header, so this allowlist is a first gate, not the last one —
-// content sniffing (plan step 21) is the real defence.
-const ALLOWED_IMAGE_TYPES = Object.freeze({
-  'image/jpeg': '.jpg',
-  'image/png': '.png',
-  'image/webp': '.webp',
-  'image/gif': '.gif',
-});
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  // Extension comes from OUR allowlist, never from path.extname(originalname).
-  // v0.0.2 preserved the client-supplied extension, which is exactly what made
-  // an uploaded .svg execute on our own origin.
-  filename: (req, file, cb) => cb(null, `${uuidv4()}${ALLOWED_IMAGE_TYPES[file.mimetype] || '.bin'}`),
-});
-const upload = multer({
-  storage,
-  limits: { fileSize: 10 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype && Object.hasOwn(ALLOWED_IMAGE_TYPES, file.mimetype)) return cb(null, true);
-    cb(new Error('Only JPEG, PNG, WebP, or GIF images are allowed'));
-  },
-});
+// The upload pipeline lives in server/uploads.js (plan step 21). It sniffs the
+// real magic bytes, caps decoded pixels, re-encodes through sharp (dropping
+// EXIF/GPS/ICC profiles and anything appended to the file), generates a
+// thumbnail, and only then writes to disk. Nothing here trusts
+// `file.mimetype` — that value is the client's own Content-Type header.
+const { photoUpload, processUpload, thumbUrlFor } = require('./uploads');
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
 app.use('/api/login', authLimiter);
@@ -402,14 +381,31 @@ app.get('/api/letters/sync', authenticateToken, (req, res) => {
   res.json(letters);
 });
 
+// Everything about this route is delegated to the pipeline in server/uploads.js.
+// The response shape is unchanged (`id`, `url`) plus `thumbUrl`, so the existing
+// client keeps working.
 app.post('/api/photos/upload', authenticateToken, (req, res) => {
-  upload.single('photo')(req, res, (err) => {
-    if (err || !req.file) return res.status(400).json({ error: err ? err.message : 'No file uploaded' });
+  photoUpload.single('photo')(req, res, async (err) => {
+    if (err || !req.file) {
+      const status = err instanceof multer.MulterError ? 400 : err?.status || 400;
+      return res.status(status).json({ error: err ? err.message : 'No file uploaded' });
+    }
     try {
+      const stored = await processUpload(req.file.buffer, uploadsDir);
       const info = getDb().prepare('INSERT INTO photos (user_id, filename, filepath) VALUES (?, ?, ?)')
-        .run(req.user.id, req.file.filename, `/uploads/${req.file.filename}`);
-      res.json({ id: info.lastInsertRowid, url: `/uploads/${req.file.filename}` });
+        .run(req.user.id, stored.filename, stored.filepath);
+      res.json({
+        id: info.lastInsertRowid,
+        url: stored.filepath,
+        thumbUrl: stored.thumbFilepath || thumbUrlFor(stored.filepath),
+      });
     } catch (e) {
+      // Fail closed: a rejected upload never reached the disk, so there is
+      // nothing to clean up here.
+      if (e && e.name === 'UploadRejected') {
+        return res.status(e.status || 400).json({ error: e.message });
+      }
+      log('Photo upload failed', { error: e && e.message });
       res.status(500).json({ error: 'Upload failed' });
     }
   });
@@ -441,6 +437,11 @@ app.use(
   '/uploads',
   authenticateToken,
   express.static(uploadsDir, {
+    // Nothing served from here is user-controlled HTML, and the pipeline
+    // guarantees raster-only output. nosniff plus an explicit index denial keeps
+    // the mount a plain file server.
+    index: false,
+    dotfiles: 'deny',
     setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
   }),
 );

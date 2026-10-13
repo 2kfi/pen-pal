@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { marked } from 'marked';
 import DOMPurify from 'dompurify';
@@ -7,8 +7,18 @@ import { SecureContextError, sealLetter } from '../lib/crypto';
 import { useAuth } from '../stores/auth';
 import { usePairing } from '../stores/pairing';
 import Field from '../components/Field';
+import SealAnimation, { usePrefersReducedMotion, type SealMoment } from '../components/SealAnimation';
 
 const DRAFT_KEY = 'pp_draft';
+
+/**
+ * Liveness guard, not choreography. If GSAP's callback never arrives — an
+ * interrupted context, a tab that was backgrounded, a timeline killed by a
+ * re-render — the send must still complete. Comfortably longer than the 700ms
+ * the moment is designed to take, so in normal operation it is never the thing
+ * that ends the wait.
+ */
+const SEAL_FALLBACK_MS = 2500;
 
 /**
  * Compose.
@@ -19,6 +29,11 @@ const DRAFT_KEY = 'pp_draft';
  * letter to plaintext on the server while the UI still claimed E2E.
  *
  * Here, failure means the letter is not sent. Ever.
+ *
+ * The seal animation changes *when* the network is told, never *what* is sent
+ * to it. Encryption still happens first and locally; the animation only delays
+ * the POST until the letter has been seen leaving, and a failed POST brings the
+ * letter back on screen before the error is shown.
  */
 export default function Compose() {
   const nav = useNavigate();
@@ -29,6 +44,26 @@ export default function Compose() {
   const [deliverAfter, setDeliverAfter] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [moment, setMoment] = useState<SealMoment | null>(null);
+
+  const sendButton = useRef<HTMLButtonElement>(null);
+  const settleSeal = useRef<(() => void) | null>(null);
+  const reducedMotion = usePrefersReducedMotion();
+  const reducedMotionRef = useRef(reducedMotion);
+
+  /** False once this screen is gone: never resume a send into a dead component. */
+  const alive = useRef(true);
+
+  useEffect(() => {
+    reducedMotionRef.current = reducedMotion;
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    alive.current = true;
+    return () => {
+      alive.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     void refresh();
@@ -37,6 +72,32 @@ export default function Compose() {
   useEffect(() => {
     localStorage.setItem(DRAFT_KEY, body);
   }, [body]);
+
+  /**
+   * Plays the seal moment and resolves when it is over.
+   *
+   * Under `prefers-reduced-motion` there is no moment to play — the whole
+   * point of that setting — so this resolves immediately and the letter is
+   * simply sent, exactly as it was before the animation existed.
+   */
+  const playSeal = useCallback((m: SealMoment) => {
+    if (reducedMotionRef.current) return Promise.resolve();
+
+    return new Promise<void>((resolve) => {
+      // Never leave an earlier wait hanging if something re-enters here.
+      settleSeal.current?.();
+
+      const finish = () => {
+        window.clearTimeout(timer);
+        settleSeal.current = null;
+        resolve();
+      };
+      const timer = window.setTimeout(finish, SEAL_FALLBACK_MS);
+
+      settleSeal.current = finish;
+      setMoment(m);
+    });
+  }, []);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -67,19 +128,40 @@ export default function Compose() {
         recipientPublicKey: JSON.parse(partner.publicKey),
         sentAt,
       });
+      if (!alive.current) return;
 
-      await api('/api/letters/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          recipientId: partner.id,
-          encryptedContent: JSON.stringify(envelope),
-          deliveredAt: deliverAfter ? new Date(deliverAfter).toISOString() : null,
-        }),
-      });
+      // The letter is sealed on this device before it moves, and it leaves
+      // before the network hears about it. docs/DESIGN.md §1: a sent letter
+      // should arrive, not appear — so nothing changes on screen until the
+      // letter is genuinely on its way.
+      await playSeal('departing');
+      if (!alive.current) return;
 
+      try {
+        await api('/api/letters/send', {
+          method: 'POST',
+          body: JSON.stringify({
+            recipientId: partner.id,
+            encryptedContent: JSON.stringify(envelope),
+            deliveredAt: deliverAfter ? new Date(deliverAfter).toISOString() : null,
+          }),
+        });
+      } catch (err) {
+        // It left and did not arrive. Bring it back on screen before saying so,
+        // so the user is never looking at a letter that has left the page while
+        // the draft — still untouched in localStorage — sits right here.
+        await playSeal('returning');
+        throw err;
+      }
+
+      if (!alive.current) return;
+
+      // Only now does the draft go. It survives every failure path above.
       localStorage.removeItem(DRAFT_KEY);
+      setMoment(null);
       nav('/letters', { replace: true });
     } catch (err) {
+      setMoment(null);
       if (err instanceof SecureContextError) {
         setError(err.message);
       } else if (err instanceof ApiError) {
@@ -99,7 +181,7 @@ export default function Compose() {
   const preview = DOMPurify.sanitize(marked.parse(body || '*Nothing written yet*') as string);
 
   return (
-    <div className="compose">
+    <div className={`compose${busy ? ' is-sealing' : ''}`}>
       <h1>Write a letter</h1>
 
       {!partner && !loading && (
@@ -132,10 +214,22 @@ export default function Compose() {
             value={deliverAfter}
             onChange={setDeliverAfter}
           />
-          <button className="primary" type="submit" disabled={busy || !body.trim() || !partner}>
+          <button
+            ref={sendButton}
+            className="primary"
+            type="submit"
+            disabled={busy || !body.trim() || !partner}
+            aria-busy={busy}
+          >
             {busy ? 'Sealing…' : 'Seal and send'}
           </button>
         </div>
+
+        {/* The animation is decorative and aria-hidden, so the state it depicts
+            is announced here instead. */}
+        <p className="sr-only" role="status">
+          {busy ? 'Sealing your letter and sending it.' : ''}
+        </p>
 
         {error && (
           <p className="alert" role="alert">
@@ -152,6 +246,12 @@ export default function Compose() {
           <article className="reader" dangerouslySetInnerHTML={{ __html: preview }} />
         </details>
       )}
+
+      <SealAnimation
+        moment={moment}
+        originRef={sendButton}
+        onSettled={() => setMoment(null)}
+      />
     </div>
   );
 }

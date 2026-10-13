@@ -1,10 +1,38 @@
+# Both `image` and `build` are present on purpose:
+#   - `docker compose up -d --build`  builds locally (one-click install path)
+#   - `docker compose pull && up -d`  uses the published image (CI/CD path)
+# The deploy workflow rewrites `image:` to an exact sha tag so a rollback has a
+# concrete version to return to.
 services:
   pen-pal:
+    image: ghcr.io/2kfi/pen-pal:latest
     build: .
+    container_name: pen-pal
+    restart: unless-stopped
     ports:
       - "3000:3000"
     volumes:
+      # Host state. Never baked into an image layer (see .dockerignore).
       - ./data:/app/data
       - ./uploads:/app/uploads
-    env_file: .env
-    restart: unless-stopped
+    # Optional on purpose. A fresh clone has no .env, and a plain `env_file`
+    # entry makes compose die with "stat .env: no such file", which tells a
+    # first-time user nothing. Marking it optional lets the container start so
+    # the SERVER emits the actionable message: "JWT_SECRET must be set".
+    #
+    # `required: false` needs Compose v2.24+. Older versions should run
+    # `cp .env.example .env` first — install.sh does that for you.
+    env_file:
+      - path: .env
+        required: false
+
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DATA_DIR: /app/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

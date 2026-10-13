@@ -514,15 +514,21 @@ textarea {
   color: var(--text);
 }
 
-/* The wax seal. The one memorable ornament in the whole product. */
+/* The wax seal. The one memorable ornament in the whole product.
+   .seal-wax is the same wax in flight, during the send moment below — they are
+   grouped so the two can never drift apart into two different seals. */
+.seal,
+.seal-wax {
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--wax-bright), var(--wax));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
 .seal {
   display: inline-block;
   width: 22px;
   height: 22px;
   margin-top: var(--space-3);
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, var(--wax-bright), var(--wax));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
 }
 
 .transit-mark {
@@ -608,6 +614,118 @@ textarea {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
+}
+
+/* Visually gone, still announced. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * seal & send — the one orchestrated moment (docs/DESIGN.md §6)        *
+ * ------------------------------------------------------------------ */
+
+/* Wax is used for one thing per screen: the seal, or the primary action, never
+   both. While the seal is in the air it is the only wax on the page, so the
+   button that started it steps back down to a postmark and the handoff reads as
+   deliberate rather than as two competing accents. */
+.compose.is-sealing button.primary {
+  opacity: 1;
+  background: var(--paper-2);
+  border-color: var(--rule-strong);
+  color: var(--muted);
+}
+
+/* Clipped to the window so an envelope leaving the right edge does not open a
+   horizontal scrollbar, and inert so it can neither take a click nor a focus. */
+.seal-stage {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.seal-lane {
+  position: absolute;
+  inset: 0;
+  perspective: 800px;
+}
+
+/* The route the letter takes, in the hairline language of the spine. Placed and
+   sized by GSAP against the submit button; a hairline, not a decoration. */
+.seal-route {
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(to right, var(--rule), transparent);
+}
+
+.seal-envelope {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 9.5rem;
+  height: 5.75rem;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+/* Depth comes from paper edges, not shadows — one hairline, no drop shadow. */
+.seal-paper {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  z-index: 0;
+}
+
+/* The flap: hinged on the envelope's top edge and open until the letter is
+   sealed, at which point GSAP rotates it down over the front. */
+.seal-flap {
+  position: absolute;
+  left: 0;
+  bottom: 100%;
+  width: 100%;
+  height: 60%;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-bottom: none;
+  clip-path: polygon(0 100%, 100% 100%, 50% 0);
+  transform-origin: bottom center;
+  will-change: transform;
+  z-index: 1;
+}
+
+/* Straddling the flap's point, as wax does. */
+.seal-wax {
+  position: absolute;
+  left: 50%;
+  top: 59%;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: -0.875rem 0 0 -0.875rem;
+  will-change: transform, opacity;
+  z-index: 2;
+}
+
+/* The rule in §6 again, enforced at the stylesheet as well as in JS: for these
+   users the moment is absent, not shortened. Compose does not mount the stage
+   at all; if it were ever mounted, nothing of it may be drawn. */
+@media (prefers-reduced-motion: reduce) {
+  .seal-stage {
+    display: none;
+  }
 }
 
 /* ------------------------------------------------------------------ *

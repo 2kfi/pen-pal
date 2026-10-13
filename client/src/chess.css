@@ -1,0 +1,560 @@
+/**
+ * Chess board styles.
+ *
+ * Self-contained: nothing here depends on index.css, and nothing here is
+ * depended upon by it. Every value is a token from tokens.css — no raw hex, per
+ * docs/DESIGN.md §4. The only derived values are opacity/colour-mix blends of a
+ * token, never a literal colour.
+ *
+ * The board is built as an 8×8 grid of real buttons. Two things drive most of
+ * this file:
+ *
+ *   - FIT. At 375px the page gives main 1rem of padding on each side, which
+ *     leaves 343px — a 42.9px square, under the 44px target floor. The board
+ *     therefore bleeds back into that gutter with a negative margin so it uses
+ *     the full 375px: 46.9px squares, no horizontal scroll. Above 640px the
+ *     gutter is 1.5rem and the board caps at 34rem, so the bleed is dropped
+ *     and the board stays inside the measure.
+ *   - NOT FIGHTING THE PIECES. Coordinates sit in the corner of the edge
+ *     squares in the lowest permitted token at a fraction of the piece size.
+ *     Highlights are washes, not blocks, so the glyph stays readable on top of
+ *     every state.
+ */
+
+.cb {
+  --cb-light-sq: var(--paper-2);
+  --cb-dark-sq: var(--ink);
+  --cb-white-piece: var(--text);
+  --cb-black-piece: var(--muted);
+  --cb-piece-size: clamp(1.35rem, 7.4vw, 2.5rem);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* The drag ghost is portalled to <body> in viewport coordinates; nothing in
+     here should establish a containing block that would trap it. */
+  position: relative;
+}
+
+[data-theme='light'] .cb {
+  --cb-light-sq: var(--paper);
+  --cb-dark-sq: var(--rule);
+}
+
+/* ------------------------------------------------------------------ *
+ * board                                                              *
+ * ------------------------------------------------------------------ */
+
+.cb-frame {
+  position: relative;
+  align-self: flex-start;
+  max-width: 100%;
+}
+
+.cb-board {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  /* minmax() rather than 1fr: the row can never be squeezed below the 44px
+     target floor by a narrow viewport, and aspect-ratio yields to that floor
+     instead of clipping the last rank. */
+  grid-template-rows: repeat(8, minmax(var(--target-min), 1fr));
+  width: min(100%, 34rem);
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: var(--cb-dark-sq);
+  /* Scrolling must still be possible from the board's empty squares; pieces opt
+     out individually (below) because a drag has to be able to start on one. */
+  touch-action: manipulation;
+}
+
+.cb-sq {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--cb-dark-sq);
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.cb-sq--light {
+  background: var(--cb-light-sq);
+}
+
+/* A drag has to begin on the piece. Suppressing the browser's scroll gesture
+   only here means the rest of the board still scrolls the page under a thumb. */
+.cb-sq:has(.cb-piece) {
+  touch-action: none;
+}
+
+.cb-sq:focus-visible {
+  outline: 3px solid var(--wax-bright);
+  outline-offset: -3px;
+  z-index: 1;
+}
+
+/* Wash overlays. Two pseudo-elements, both stretched over the square, so no
+   state is ever expressed by hiding or replacing the piece. */
+.cb-sq::before,
+.cb-sq::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cb-sq::before {
+  z-index: 1;
+  background: transparent;
+}
+
+/* Last move: from and to are distinguished by tint AND by a bar on the edge of
+   the square, so the origin is identifiable without colour. */
+.cb-sq--from::before,
+.cb-sq--to::before {
+  background: var(--wax);
+  opacity: 0.16;
+}
+
+.cb-sq--to::after {
+  border: 3px solid var(--wax);
+  opacity: 0.85;
+}
+
+/* Selection wins over the last-move wash but not over a check ring. */
+.cb-sq--selected::before {
+  background: var(--wax-bright);
+  opacity: 0.28;
+}
+
+.cb-sq--selected::after {
+  border: 3px solid var(--wax-bright);
+  opacity: 1;
+}
+
+/* Legal destination: a filled dot in the middle. Empty square gets a ring
+   instead, so the mark is never lost behind a piece that is moving onto it. */
+.cb-sq--target::after {
+  border: 3px solid var(--in-transit);
+  opacity: 0.9;
+  background: none;
+}
+
+.cb-sq--target::before {
+  background: var(--in-transit);
+  opacity: 0.34;
+}
+
+/* The piece lifts out of the board for the duration of a drag. */
+.cb-sq--lifted .cb-piece {
+  opacity: 0.28;
+}
+
+/* Check: a pulsing ring on the king's square. The "!" in the corner of the same
+   square is the redundant, non-colour indicator. */
+.cb-sq--check::after {
+  border: 3px solid var(--danger);
+  opacity: 1;
+  animation: cb-check-pulse 1.4s var(--ease) infinite;
+}
+
+@keyframes cb-check-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 var(--danger);
+  }
+  50% {
+    box-shadow: inset 0 0 0 5px var(--danger);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * pieces and coordinates                                             *
+ * ------------------------------------------------------------------ */
+
+.cb-piece {
+  position: relative;
+  z-index: 2;
+  font-size: var(--cb-piece-size);
+  line-height: 1;
+  user-select: none;
+  pointer-events: none;
+}
+
+.cb-piece--w,
+.cb-loose--w {
+  color: var(--cb-white-piece);
+}
+
+.cb-piece--b,
+.cb-loose--b {
+  color: var(--cb-black-piece);
+}
+
+/* Ink outline on the black pieces. On the dark theme a dark glyph on a dark
+   square is the classic chess-legibility failure; the stroke keeps the silhouette
+   without changing which side is which. */
+.cb-piece--b {
+  text-shadow:
+    0 0 1px var(--cb-dark-sq),
+    0 0 1px var(--cb-dark-sq);
+}
+
+.cb-coord {
+  position: absolute;
+  z-index: 2;
+  font-family: var(--font-postmark);
+  font-size: clamp(0.5rem, 2.1vw, 0.625rem);
+  line-height: 1;
+  color: var(--muted);
+  opacity: 0.72;
+  pointer-events: none;
+}
+
+.cb-coord--rank {
+  top: 3px;
+  left: 3px;
+}
+
+.cb-coord--file {
+  right: 3px;
+  bottom: 2px;
+}
+
+/* ------------------------------------------------------------------ *
+ * promotion picker                                                  *
+ * ------------------------------------------------------------------ */
+
+.cb-promo {
+  position: absolute;
+  z-index: 4;
+  width: calc(100% / 8);
+  height: calc(50% - 1px);
+  left: calc(var(--cb-file) * 100% / 8);
+  top: calc(var(--cb-rank) * 100% / 8);
+  display: grid;
+  grid-template-rows: repeat(4, 1fr);
+  border: 1px solid var(--wax);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 var(--space-2) var(--space-3) color-mix(in srgb, var(--ink) 45%, transparent);
+  /* White promotes on rank 8 and the strip hangs down into the board; black
+     promotes on rank 1 and the strip hangs up. Both stay on the board. */
+  animation: cb-promo-in var(--duration-base) var(--ease);
+}
+
+.cb-promo[data-side='b'] {
+  transform: translateY(-100%);
+}
+
+@keyframes cb-promo-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cb-promo-btn {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper-2);
+  color: var(--text);
+  font-size: calc(var(--cb-piece-size) * 0.9);
+  line-height: 1;
+  cursor: pointer;
+}
+
+.cb-promo-btn:last-child {
+  border-bottom: 0;
+}
+
+.cb-promo-btn:hover {
+  background: var(--paper);
+}
+
+.cb-promo-btn:focus-visible {
+  outline: 3px solid var(--wax-bright);
+  outline-offset: -3px;
+}
+
+/* ------------------------------------------------------------------ *
+ * status and verdict                                                *
+ * ------------------------------------------------------------------ */
+
+.cb-statusbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: calc(var(--target-min) - var(--space-2));
+}
+
+.cb-status {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cb-flag {
+  display: inline-grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: var(--radius-chip);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cb-flag--check {
+  background: var(--danger);
+  color: var(--ink);
+}
+
+.cb-verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: var(--type-md);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  text-transform: none;
+}
+
+.cb-verdict-mark {
+  display: inline-grid;
+  place-items: center;
+  width: var(--target-min);
+  height: var(--target-min);
+  flex: none;
+  border: 2px solid currentcolor;
+  border-radius: var(--radius-chip);
+  font-size: var(--type-sm);
+}
+
+.cb-verdict--mate {
+  color: var(--danger);
+}
+
+.cb-verdict--draw {
+  color: var(--in-transit);
+}
+
+/* ------------------------------------------------------------------ *
+ * panel: captures, controls, move list                               *
+ * ------------------------------------------------------------------ */
+
+.cb-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.cb-label {
+  display: block;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.cb-trays {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+.cb-tray {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-height: var(--space-6);
+}
+
+.cb-tray-pieces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  font-size: var(--type-md);
+  line-height: 1;
+}
+
+.cb-tray-empty {
+  color: var(--rule-strong);
+}
+
+.cb-loose {
+  opacity: 0.75;
+}
+
+.cb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.cb-btn {
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--text);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
+}
+
+.cb-btn:hover:not(:disabled) {
+  border-color: var(--wax);
+  color: var(--wax-bright);
+}
+
+.cb-btn:disabled {
+  border-color: var(--rule);
+  color: var(--muted);
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cb-btn[aria-pressed='true'] {
+  border-color: var(--wax);
+  color: var(--wax);
+}
+
+.cb-notelist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.cb-moves {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  gap: var(--space-1) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 11rem;
+  overflow-y: auto;
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-2);
+}
+
+.cb-move-pair {
+  display: grid;
+  grid-template-columns: 2.25rem 1fr 1fr;
+  gap: var(--space-2);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.cb-move-n {
+  color: var(--muted);
+}
+
+.cb-move {
+  color: var(--text);
+}
+
+.cb-empty,
+.cb-help {
+  font-family: var(--font-reading);
+  font-size: var(--type-sm);
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+.cb-help {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+
+/* ------------------------------------------------------------------ *
+ * drag ghost — portalled to <body>, positioned in viewport pixels     *
+ * ------------------------------------------------------------------ */
+
+.cb-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 60;
+  font-size: var(--cb-piece-size);
+  line-height: 1;
+  pointer-events: none;
+  user-select: none;
+  /* A dragged piece physically leaves the page, so it is allowed a shadow —
+     the one place in this app that earns one. */
+  filter: drop-shadow(0 var(--space-2) var(--space-2) color-mix(in srgb, var(--ink) 55%, transparent));
+  opacity: 0.95;
+}
+
+/* ------------------------------------------------------------------ *
+ * viewport                                                           *
+ * ------------------------------------------------------------------ */
+
+/* < 640px: reclaim main's 1rem gutter on each side. 375px viewport → 375px
+   board → 46.9px squares, which clears the 44px target floor and still does
+   not scroll sideways. */
+@media (max-width: 639.98px) {
+  .cb-frame {
+    width: calc(100% + 2 * var(--space-4));
+    margin-inline: calc(-1 * var(--space-4));
+  }
+
+  .cb-board {
+    width: 100%;
+  }
+}
+
+@media (min-width: 640px) {
+  .cb {
+    --cb-piece-size: clamp(1.5rem, 3.6vw, 2.5rem);
+  }
+
+  .cb-frame {
+    width: min(100%, 34rem);
+  }
+}
+
+/* Motion collapses to nothing rather than merely shortening (DESIGN §6). The
+   tokens already do this globally; these rules keep the two keyframe animations
+   honest if this file is ever loaded on its own. */
+@media (prefers-reduced-motion: reduce) {
+  .cb-sq,
+  .cb-btn,
+  .cb-promo {
+    animation: none;
+    transition: none;
+  }
+
+  .cb-sq--check::after {
+    animation: none;
+    box-shadow: inset 0 0 0 4px var(--danger);
+  }
+}

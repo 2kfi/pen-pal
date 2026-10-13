@@ -1,0 +1,95 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # Never let two deploys overlap. `cancel-in-progress: false` matters here —
+  # cancelling a deploy midway could leave the server between versions.
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Where the app lives on the host, and how we decide it is alive.
+  DEPLOY_PATH: /opt/pen-pal-archive
+  HEALTH_URL: http://localhost:3000/healthz
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy with health check and rollback
+        uses: appleboy/ssh-action@v1.2.2
+        env:
+          IMAGE_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          port: ${{ secrets.SERVER_PORT || 22 }}
+          script_stop: pkill -f 'docker compose' || true
+          script: |
+            set -euo pipefail
+            cd "$DEPLOY_PATH"
+
+            # --- remember what is running right now, so we can put it back ---
+            PREVIOUS_TAG="$(docker inspect pen-pal \
+              --format '{{index .Config.Image}}' 2>/dev/null || echo '')"
+            echo "previous image: ${PREVIOUS_TAG:-<none>}"
+
+            docker compose pull
+
+            # Pin the compose file to the exact sha being deployed, not `latest`.
+            # A rolling tag means "what failed five minutes ago" is unrecoverable.
+            sed -i "s|image: .*|image: ${IMAGE_TAG}|" docker-compose.yml
+
+            if ! docker compose up -d; then
+              echo "::error::compose up failed"
+              [ -n "$PREVIOUS_TAG" ] && sed -i "s|image: .*|image: ${PREVIOUS_TAG}|" docker-compose.yml
+              docker compose up -d || true
+              exit 1
+            fi
+
+            # --- verify it actually works, do not just assume it booted ---
+            echo "waiting for ${HEALTH_URL}"
+            HEALTHY=0
+            for i in $(seq 1 30); do
+              if curl -fsS -o /dev/null "$HEALTH_URL"; then
+                HEALTHY=1
+                echo "healthy after ${i}s"
+                break
+              fi
+              sleep 2
+            done
+
+            if [ "$HEALTHY" -ne 1 ]; then
+              echo "::error::deploy unhealthy after 60s, rolling back"
+              docker compose logs --tail 100 || true
+
+              if [ -n "$PREVIOUS_TAG" ]; then
+                echo "rolling back to ${PREVIOUS_TAG}"
+                sed -i "s|image: .*|image: ${PREVIOUS_TAG}|" docker-compose.yml
+                docker compose up -d
+                for i in $(seq 1 15); do
+                  curl -fsS -o /dev/null "$HEALTH_URL" && break
+                  sleep 2
+                done
+                echo "rollback complete"
+              else
+                echo "no previous image recorded; leaving failed version in place for inspection"
+              fi
+              exit 1
+            fi
+
+            echo "deploy ok: ${IMAGE_TAG}"
+
+            # Prune dangling images only. The previous workflow ran
+            # `docker system prune -f`, which can delete the very image the
+            # rollback above depends on.
+            docker image prune -f --filter "until=168h"

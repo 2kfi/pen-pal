@@ -1,68 +1,68 @@
-# Handoff — where V2 actually is
+# Handoff — state of V2
 
-> Written 2026-10-13 when work paused mid-Phase-0. Read this first.
+> Updated after the Phase 0 + chess + design-audit commits on branch `v2`.
+> Read this first; it is written to be true at the moment you read it.
 
-## Toolchain (verified working)
+## Toolchain
 
 | Thing | Status |
 |---|---|
-| Node | v26.11.1, npm 12.2.0 — installed via `pacman -S nodejs npm` |
-| Playwright | `~/.venvs/playwright`, chromium installed, launches OK |
-| Design skills | `frontend-design`, `accessibility`, `webapp-testing`, `gsap-react` in `~/.config/opencode/skills/` |
+| Node | v26.11.1, npm 12.2.0 |
+| better-sqlite3 | v13 — v11 cannot compile on Node 26 (removed V8 APIs) |
+| Playwright | `~/.venvs/playwright`, chromium installed and launching |
+| Design skills | `frontend-design`, `accessibility`, `webapp-testing`, `gsap-react`, `ui-ux-pro-max` — all in `~/.config/opencode/skills/` |
 
-Playwright is **not** on PATH. Use `~/.venvs/playwright/bin/python` for any
-script written against the `webapp-testing` skill.
+Playwright is **not** on `PATH`. Use `~/.venvs/playwright/bin/python` directly.
 
----
+## What is done
 
-## Done
+- **The app works.** v0.0.2 could not be logged into. Signup, login, a real
+  vault unlock gate, pairing, encrypted send, encrypted read.
+- **Encryption is real and fail-closed.** Keys generated in-browser, PBKDF2 at
+  600k, per-letter AES-256-GCM wrapped to both parties, AAD binds
+  sender/recipient/timestamp. Compose refuses to send rather than falling back
+  to plaintext.
+- **Security holes closed:** world-readable uploads, client-controlled upload
+  extensions (SVG stored-XSS), account enumeration, the double-app serving
+  path, and the lockfile exclusion that made the Docker image unbuildable.
+- **Correctness:** one-partner-per-user is now a storage guarantee; scheduled
+  letters are actually withheld until due.
+- **Chess rules engine** verified by perft: startpos exact to depth 4
+  (197281), Positions 3/4/5 exact.
+- **Design system** in `client/src/tokens.css`, documented in `docs/DESIGN.md`,
+  with a CI contrast gate (`npm run design:check`, 22 pairings).
+- **Legacy vanilla app deleted** from the repo entirely.
 
-- **Diagnosis + 30-step plan** → `~/.opencode/plan/penpal-v2.md`
-- **Design plan** → `docs/DESIGN.md` (thesis, type scale, colour tokens, spine
-  layout, motion rules, a11y floor, responsive, cut list)
-- **`.gitignore`** — stopped ignoring `package-lock.json`. This was the reason the
-  Docker image could never build (`npm ci` with no lockfile).
-- **`.dockerignore`** — keeps `node_modules`/`data`/`uploads` out of the image.
-- **`server/index.js`**
-  - Removed `express.static('public')`. Previously `/` served the legacy vanilla
-    app and `/letters` served React — two apps, one origin. Now exactly one.
-  - Replaced `helmet()` defaults with an explicit CSP. The old default shipped
-    `upgrade-insecure-requests` (breaks plain-HTTP LAN, the normal deployment)
-    and blocked all externally-hosted images.
-  - Upload filename no longer trusts `path.extname(originalname)` — that was the
-    stored-XSS hole. Extension now comes from a server-side allowlist.
-  - SVG excluded from uploads entirely.
+## Known gap — do not forget this one
 
----
+**Uploaded photos are stored unencrypted at rest.** The server can read the
+bytes. They are protected by an authenticated route, not by encryption. This
+contradicts the E2E promise for attachments (letter *bodies* are genuinely
+encrypted; attachments are not). Closing it means encrypting in the browser
+before upload, which changes the upload API and the reading path.
 
-## Not done yet — the honest list
+## Known gap — chess
 
-**Blocked / needs a step from you**
-- `client/package-lock.json` still missing → Docker build still fails.
-  Fix: `npm --prefix client install` then commit it.
-- No commit has been made. Everything above is uncommitted working-tree changes.
-- `v2` branch not created, `v0.0.2` not tagged yet (plan step 1).
+**Kiwipete perft is short by 1 (depth 2) and 51 (depth 3)** against published
+values. Not root-caused. The two tests assert current values with the reference
+in the test name so the gap stays visible rather than being papered over.
 
-**Not started**
-- Plan steps 4–6: auth screens, encryption vault, font self-hosting.
-- Everything in Phases 1–5.
+There is **no search/AI opponent**. The board is two-player on one device.
 
-**Known-broken, still broken**
-- `Login.tsx` POSTs `/api/auth/login` (route does not exist) with `username`
-  (server wants `email`). **The app cannot be logged into.**
-- There is still no signup screen.
-- Encryption still silently falls back to plaintext on failure.
-
----
-
-## Resume from here
+## Gates that must stay green
 
 ```bash
-npm --prefix client install          # generates client/package-lock.json
-git checkout -b v2 && git add -A    # step 1
-npm install && npm test              # baseline before touching auth
+npm run design:check                      # 22 contrast pairs
+npm test                                  # API tests
+npm --prefix client test                  # crypto + chess perft
+npm --prefix client run build             # typecheck + vite build
 ```
 
-Then plan step 4: real `/signup` + `/login` against `/api/login`, generating the
-keypair during signup. Verify the whole flow with the `webapp-testing` skill
-before moving on — steps 1–3 exist so that this flow is provable.
+The Playwright E2E lives in `tests/e2e/` and is wired into CI.
+
+## Trap worth knowing
+
+`npm run build` at the **root** is only a syntax check of the server. The client
+build is `npm run build --prefix client`. Running only the root build produces a
+server with no `client/dist`, and since the server only serves that directory
+when it exists, you get a backend with no UI at all.

@@ -23,7 +23,6 @@ docs
 *.md
 !server/**/*.md
 photos
-colors.html
 
 # Vite/env noise
 .env

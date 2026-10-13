@@ -72,6 +72,15 @@ coverage/
 # Scratch space for tooling (playwright screenshots, build probes)
 tmp/
 
+# E2E run artefacts. Screenshots and the throwaway SQLite DB from a local run
+# are noise, not source.
+tests/e2e/screenshots/
+tests/e2e/*.db
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
 # NOTE: package-lock.json is intentionally NOT ignored.
 # The Dockerfile runs `npm ci` in both /app and /app/client, which requires a
 # committed lockfile. Ignoring it (as v0.0.2 did) made the image unbuildable.

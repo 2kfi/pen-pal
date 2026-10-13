@@ -6,6 +6,7 @@ import App from './App';
 import './fonts.css';
 import './tokens.css';
 import './index.css';
+import './chess.css';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -9,6 +9,8 @@
     "lint": "node --check server/index.js && node --check server/db.js",
     "design:check": "node tools/check-contrast.mjs",
     "test": "vitest run",
+    "e2e": "python3 tests/e2e/app.spec.py",
+    "e2e:setup": "python3 -m pip install playwright && python3 -m playwright install --with-deps chromium",
     "build": "node --check server/index.js && node --check server/db.js"
   },
   "keywords": [
@@ -30,6 +32,7 @@
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "sharp": "^0.35.5",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
