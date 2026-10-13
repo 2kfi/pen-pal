@@ -69,5 +69,9 @@ coverage/
 .cache/
 .npm/
 
-# Optional npm dependencies
-package-lock.json
+# Scratch space for tooling (playwright screenshots, build probes)
+tmp/
+
+# NOTE: package-lock.json is intentionally NOT ignored.
+# The Dockerfile runs `npm ci` in both /app and /app/client, which requires a
+# committed lockfile. Ignoring it (as v0.0.2 did) made the image unbuildable.

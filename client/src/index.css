@@ -1,147 +1,624 @@
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
+/**
+ * PenPal — component styles.
+ *
+ * Built entirely on the tokens in tokens.css. No raw colour values below.
+ * Mobile-first: the base rules target a phone, and the single breakpoint at
+ * 640px promotes to the two-zone desktop layout. v0.0.2 shipped zero media
+ * queries while claiming to be mobile-first.
+ */
+
+/* ------------------------------------------------------------------ *
+ * reset                                                              *
+ * ------------------------------------------------------------------ */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
 }
-a { color: var(--amber-text); }
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  background: var(--ink);
+  color: var(--text);
+  font-family: var(--font-reading);
+  font-size: var(--type-base);
+  line-height: var(--leading-reading);
+  padding-bottom: calc(64px + env(safe-area-inset-bottom));
+}
+
+/* Links inherit the reading colour. Without this they render as UA-default blue
+   and underlined, which is exactly the "looks unstyled" tell. */
+a {
+  color: var(--wax);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+a:hover {
+  color: var(--wax-bright);
+}
+
+img,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+/* One visible focus style everywhere. v0.0.2 had none at all, which made the
+   entire app unusable by keyboard. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--radius);
+}
+
+/* ------------------------------------------------------------------ *
+ * skip link                                                          *
+ * ------------------------------------------------------------------ */
+.skip-link {
+  position: absolute;
+  left: var(--space-2);
+  top: -100px;
+  z-index: 100;
+  padding: var(--space-2) var(--space-3);
+  background: var(--paper);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: top var(--duration-base) var(--ease);
+}
+
+.skip-link:focus {
+  top: var(--space-2);
+}
+
+/* ------------------------------------------------------------------ *
+ * typography primitives                                              *
+ * ------------------------------------------------------------------ */
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+h1 {
+  font-size: var(--type-xl);
+}
+
+h2 {
+  font-size: var(--type-lg);
+  margin-top: var(--space-5);
+}
+
+p {
+  text-wrap: pretty;
+}
+
+.muted {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+/* The only uppercase in the system, and it always carries real data. */
+.postmark {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.alert {
+  margin-top: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--danger);
+  border-left-width: 3px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  font-size: var(--type-sm);
+}
+
+/* ------------------------------------------------------------------ *
+ * chrome                                                             *
+ * ------------------------------------------------------------------ */
 .topbar {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  padding: 0.75rem 1rem;
-  background: var(--nav-bg);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
+  z-index: 20;
+  border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--ink) 88%, transparent);
+  backdrop-filter: blur(10px);
 }
-.topbar nav { display: flex; gap: 0.75rem; margin-left: auto; flex-wrap: wrap; }
-.topbar a { text-decoration: none; font-family: var(--mono); font-size: 0.85rem; }
-.topbar a.active { color: var(--amber2); text-decoration: underline; }
-.brand { font-weight: 800; color: var(--white); }
-main { padding: 1rem; max-width: 720px; margin: 0 auto; }
+
+/* The bar's contents share main's measure and padding, so the brand sits above
+   the text column instead of drifting off to the far edge of the window. */
+.topbar-inner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  max-width: 68ch;
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  .topbar-inner {
+    padding: var(--space-3) var(--space-5);
+  }
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-md);
+  letter-spacing: -0.02em;
+}
+
+.topbar-actions {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+.topbar nav {
+  display: flex;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
+.topbar nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius);
+  color: var(--muted);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
+}
+
+.topbar nav a:hover {
+  color: var(--text);
+}
+
+.topbar nav a.active {
+  color: var(--wax);
+  background: var(--wax-wash);
+}
+
+/* Bottom tab bar on phones. */
+@media (max-width: 639px) {
+  .topbar {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-bottom: none;
+    border-top: 1px solid var(--rule);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Column, not column-reverse: actions on top, tabs underneath. Explicit DOM
+     order beats fighting `order` against a reversed flex direction. */
+  .topbar-inner {
+    flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2);
+  }
+
+  .brand {
+    display: none;
+  }
+
+  .topbar-actions {
+    margin-left: 0;
+    justify-content: flex-end;
+    order: -1;
+  }
+
+  .topbar-actions button {
+    min-height: 36px;
+    padding-inline: var(--space-3);
+    font-size: var(--type-xs);
+  }
+
+  .topbar nav {
+    width: 100%;
+    margin-left: 0;
+    justify-content: space-around;
+  }
+
+  .topbar nav a {
+    flex: 1;
+    justify-content: center;
+    padding: 0 var(--space-1);
+  }
+}
+
+main {
+  padding: var(--space-5) var(--space-4);
+  max-width: 68ch;
+  margin-inline: auto;
+}
+
+@media (min-width: 640px) {
+  main {
+    padding: var(--space-6) var(--space-5);
+  }
+}
+
 .card {
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-4);
 }
-.muted { color: var(--muted); font-family: var(--mono); font-size: 0.8rem; }
-button, input {
-  font-family: var(--mono);
-  background: var(--bg3);
+
+.auth-card {
+  max-width: 42ch;
+  margin-inline: auto;
+  margin-block-start: var(--space-6);
+}
+
+/* ------------------------------------------------------------------ *
+ * controls                                                           *
+ * ------------------------------------------------------------------ */
+button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  background: var(--paper-2);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease),
+    background-color var(--duration-fast) var(--ease);
 }
-button { cursor: pointer; }
-button.primary { background: var(--amber); border-color: var(--amber-border-tag); color: #111; }
+
+button:hover:not(:disabled) {
+  border-color: var(--muted);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--wax);
+  border-color: var(--wax);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--wax-bright);
+  border-color: var(--wax-bright);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.field label {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.field input,
+.field textarea,
 textarea {
-  font-family: var(--sans);
-  background: var(--bg3);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.5rem 0.75rem;
   width: 100%;
+  min-height: var(--target-min);
+  padding: var(--space-3);
+  background: var(--paper-2);
+  color: var(--text);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--font-reading);
+  line-height: var(--leading-reading);
 }
-textarea.drop-active { border-color: var(--teal); outline: 2px dashed var(--teal); }
-/* Letters stream: one column, static SVG path spine (no scroll animation) */
-.stream { position: relative; display: flex; flex-direction: column; gap: 1rem; padding-left: 2rem; margin-top: 1rem; }
-.spine { position: absolute; left: 0; top: 0; height: 100%; }
-.spine path { fill: none; stroke: var(--amber-border-tag); stroke-width: 2; }
-.letter-card {
+
+textarea {
+  font-size: var(--type-md);
+  resize: vertical;
+}
+
+.field-hint {
+  font-size: var(--type-xs);
+  color: var(--muted);
+}
+
+.field-error {
+  font-size: var(--type-xs);
+  color: var(--danger);
+}
+
+/* ------------------------------------------------------------------ *
+ * the archive — a spine, not a card grid                             *
+ * ------------------------------------------------------------------ */
+.archive {
+  position: relative;
+  padding-left: var(--space-5);
+  margin-top: var(--space-4);
+}
+
+.spine {
+  position: absolute;
+  left: 5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    var(--rule) var(--space-2),
+    var(--rule) calc(100% - var(--space-2)),
+    transparent
+  );
+}
+
+.letter {
   position: relative;
   display: block;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  color: var(--text);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-letter);
+  color: inherit;
   text-decoration: none;
+  transition: border-color var(--duration-fast) var(--ease);
 }
-.letter-card p { margin: 0.25rem 0 0; overflow-wrap: anywhere; }
-.letter-dot {
+
+.letter:hover {
+  border-color: var(--muted);
+}
+
+.letter::before {
+  content: '';
   position: absolute;
-  left: -1.65rem;
-  top: 1rem;
-  width: 0.7rem;
-  height: 0.7rem;
+  left: calc(-1 * var(--space-5) + 1px);
+  top: var(--space-4);
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
-  background: var(--amber);
+  background: var(--rule);
+  border: 2px solid var(--ink);
 }
-/* Reader typography */
-.reader { line-height: 1.75; }
-.reader p { overflow-wrap: anywhere; }
-/* Compose */
-.compose-grid { display: grid; gap: 0.75rem; grid-template-columns: 1fr; }
-.send-envelope { will-change: transform, opacity; }
-/* Phase 4: media, mini-player, chess, notifications — CSS only (no GSAP) */
-.lib-grid { display: grid; gap: 0.5rem; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); margin: 0.75rem 0; }
-.lib-grid button[aria-pressed='true'] { border-color: var(--amber); color: var(--amber2); }
-.media-grid { display: grid; gap: 0.75rem; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); margin-top: 0.75rem; }
-.media-card img { width: 100%; aspect-ratio: 16 / 10; object-fit: cover; border-radius: 6px; background: var(--bg3); }
-.media-card p { overflow-wrap: anywhere; }
-.mini-player {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
+
+/* A letter still travelling. Teal means transit and nothing else. */
+.letter.transit::before {
+  background: var(--in-transit);
+  animation: drift 3s var(--ease) infinite;
+}
+
+.letter.transit .letter-excerpt {
+  filter: blur(3px);
+  opacity: 0.55;
+  user-select: none;
+}
+
+.letter.transit .letter-state {
+  color: var(--in-transit);
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+.letter-state {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.letter-excerpt {
+  margin-top: var(--space-2);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+  overflow-wrap: anywhere;
+  /* Explicit: .letter is an <a>, and `a { color: var(--wax) }` would otherwise
+     paint the whole letter excerpt in the accent colour. */
+  color: var(--text);
+}
+
+/* The wax seal. The one memorable ornament in the whole product. */
+.seal {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-top: var(--space-3);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, var(--wax-bright), var(--wax));
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 30%, transparent);
+}
+
+.transit-mark {
+  display: inline-block;
+  width: 22px;
+  height: 22px;
+  margin-top: var(--space-3);
+  border-radius: 50%;
+  border: 2px dashed var(--in-transit);
+  animation: drift 3s var(--ease) infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ * reader — letters are set in a reading serif, never monospace      *
+ * ------------------------------------------------------------------ */
+.reader {
+  max-width: var(--measure);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+}
+
+.reader p {
+  margin-bottom: var(--space-4);
+}
+
+.reader blockquote {
+  margin-left: 0;
+  padding-left: var(--space-4);
+  border-left: 2px solid var(--wax);
+  color: var(--muted);
+}
+
+.reader pre {
+  padding: var(--space-3);
+  overflow-x: auto;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+}
+
+.raw pre {
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  overflow-x: auto;
+  background: var(--paper-2);
+  border-radius: var(--radius);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * compose                                                            *
+ * ------------------------------------------------------------------ */
+.compose-actions {
   display: flex;
-  gap: 0.5rem;
-  align-items: center;
-  padding: 0.5rem 0.75rem calc(0.5rem + env(safe-area-inset-bottom));
-  background: var(--nav-bg);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(8px);
-  animation: mp-in 200ms ease;
-  z-index: 50;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
 }
-.mini-player button { min-width: 44px; min-height: 44px; }
-.mini-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@keyframes mp-in { from { opacity: 0; } to { opacity: 1; } }
-body:has(.mini-player) main { padding-bottom: 4.5rem; }
-.chess-board {
+
+.compose-actions .field {
+  flex: 1 1 14rem;
+  margin-bottom: 0;
+}
+
+.preview {
+  margin-top: var(--space-5);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+}
+
+.preview summary {
+  min-height: var(--target-min);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * chess                                                              *
+ * ------------------------------------------------------------------ */
+.board {
   display: grid;
-  grid-template-columns: repeat(8, minmax(44px, 1fr));
-  max-width: 560px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  grid-template-columns: repeat(8, 1fr);
+  width: min(100%, 34rem);
+  aspect-ratio: 1;
+  margin-block: var(--space-4);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
   overflow: hidden;
 }
-.chess-sq {
-  min-width: 44px;
-  min-height: 44px;
-  aspect-ratio: 1;
-  border: 0;
-  border-radius: 0;
-  padding: 0;
-  font-size: 1.6rem;
+
+.square {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg2);
+  aspect-ratio: 1;
+  min-height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: var(--paper);
   color: var(--text);
+  font-size: clamp(1.25rem, 6vw, 2rem);
+  line-height: 1;
 }
-.chess-sq.light { background: var(--bg3); }
-.chess-sq.sel { outline: 2px solid var(--amber); outline-offset: -2px; }
-.chess-sq.tgt { outline: 2px solid var(--teal); outline-offset: -2px; }
-.notif-wrap { position: relative; }
-.notif-panel {
-  position: absolute;
-  right: 0;
-  top: calc(100% + 0.5rem);
-  width: min(320px, 90vw);
-  max-height: 60vh;
-  overflow: auto;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.75rem;
-  padding-bottom: calc(0.75rem + env(safe-area-inset-bottom));
-  z-index: 60;
+
+.square.light {
+  background: var(--paper-2);
 }
-.notif-panel button { min-height: 44px; }
+
+.square.selected {
+  box-shadow: inset 0 0 0 3px var(--wax);
+}
+
+.square.target {
+  box-shadow: inset 0 0 0 3px var(--in-transit);
+}
+
+.square:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: -3px;
+}
+
+.chess-status {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}

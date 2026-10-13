@@ -30,27 +30,76 @@ const SECRET = JWT_SECRET && !DEFAULT_SECRETS.includes(JWT_SECRET) ? JWT_SECRET 
 
 const log = (msg, extra = {}) => console.log(JSON.stringify({ t: new Date().toISOString(), msg, ...extra }));
 
-app.use(helmet());
+// Explicit CSP instead of helmet()'s default.
+//
+// Why not the default: it ships `upgrade-insecure-requests` (breaks plain-HTTP LAN
+// deployments, which is the normal case for a self-hosted pen pal) and an img-src
+// of `'self' data:`, which silently blocked every externally-hosted image.
+//
+// `style-src` allows 'unsafe-inline' because React inline style={{}} props are used
+// pervasively. That is tracked tech debt — it goes away when styles move to the
+// token/component layer. See docs/DESIGN.md.
+const CSP_DIRECTIVES = {
+  defaultSrc: ["'self'"],
+  scriptSrc: ["'self'"],
+  styleSrc: ["'self'", "'unsafe-inline'"],
+  imgSrc: ["'self'", 'data:', 'blob:'],
+  fontSrc: ["'self'"],
+  connectSrc: ["'self'"],
+  mediaSrc: ["'self'", 'blob:'],
+  objectSrc: ["'none'"],
+  baseUri: ["'self'"],
+  formAction: ["'self'"],
+  frameAncestors: ["'none'"],
+};
+app.use(
+  helmet({
+    contentSecurityPolicy: { useDefaults: false, directives: CSP_DIRECTIVES },
+    crossOriginEmbedderPolicy: false,
+  }),
+);
 const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') : (isProd ? false : true);
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '1mb' }));
-app.use(express.static('public'));
+
+// NOTE: v0.0.2 mounted `express.static('public')` here, which meant `/` served the
+// legacy vanilla app while `/letters` served the React app — two apps, two auth
+// flows, one origin. The legacy client is archived in git history and is no longer
+// served. There is now exactly one app.
 
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-app.use('/uploads', express.static(uploadsDir, { setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff') }));
+// NOTE: the /uploads static mount is registered further down, *after* auth is
+// defined. v0.0.2 served it world-readable at /uploads/<uuid>, which put every
+// uploaded photo in plaintext on a public URL and contradicted the app's entire
+// E2E promise.
+
+// Only these raster formats are accepted. SVG is deliberately excluded: it is an
+// XML document that can carry <script>, so an uploaded .svg served from our own
+// origin is a stored-XSS primitive. `file.mimetype` comes from the client's
+// Content-Type header, so this allowlist is a first gate, not the last one —
+// content sniffing (plan step 21) is the real defence.
+const ALLOWED_IMAGE_TYPES = Object.freeze({
+  'image/jpeg': '.jpg',
+  'image/png': '.png',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+});
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => cb(null, `${uuidv4()}${path.extname(file.originalname)}`)
+  // Extension comes from OUR allowlist, never from path.extname(originalname).
+  // v0.0.2 preserved the client-supplied extension, which is exactly what made
+  // an uploaded .svg execute on our own origin.
+  filename: (req, file, cb) => cb(null, `${uuidv4()}${ALLOWED_IMAGE_TYPES[file.mimetype] || '.bin'}`),
 });
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype && file.mimetype.startsWith('image/')) return cb(null, true);
-    cb(new Error('Only image uploads are allowed'));
-  }
+    if (file.mimetype && Object.hasOwn(ALLOWED_IMAGE_TYPES, file.mimetype)) return cb(null, true);
+    cb(new Error('Only JPEG, PNG, WebP, or GIF images are allowed'));
+  },
 });
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 30, standardHeaders: true, legacyHeaders: false });
@@ -60,6 +109,13 @@ app.use('/api/signup', authLimiter);
 function generatePID() {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
 }
+
+/**
+ * A syntactically valid bcrypt hash of a value nobody can supply, used to spend the
+ * same CPU on the "user does not exist" path as on a real verification. Without it
+ * a missing account responds noticeably faster than a wrong password.
+ */
+const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 // Manual validation (no new deps): returns error string or null
 function checkStr(v, { required = false, min = 0, max = 1024 } = {}) {
@@ -117,10 +173,17 @@ app.post('/api/login', async (req, res) => {
   if (bad) return res.status(400).json({ error: `Invalid login body: ${bad}` });
   try {
     const user = getDb().prepare('SELECT * FROM users WHERE email = ?').get(email);
-    if (!user) return res.status(400).json({ error: 'User not found' });
+    // Identical response for "no such user" and "wrong password". v0.0.2 returned
+    // "User not found" vs "Invalid password" — a free account-enumeration oracle
+    // for anyone holding a list of email addresses.
+    if (!user) {
+      // Burn comparable time so the response does not leak existence either.
+      await bcrypt.compare(password, DUMMY_HASH);
+      return res.status(401).json({ error: 'Email or password is incorrect' });
+    }
 
     const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(400).json({ error: 'Invalid password' });
+    if (!validPassword) return res.status(401).json({ error: 'Email or password is incorrect' });
 
     const token = jwt.sign({ id: user.id, username: user.username, pid: user.pid }, SECRET, { expiresIn: '7d' });
     res.json({
@@ -164,8 +227,17 @@ app.put('/api/me', authenticateToken, (req, res) => {
   }
 });
 
+/**
+ * A pair is stored as one row per user, so checking one direction is sufficient —
+ * both rows are always written together inside the same transaction-ish block.
+ */
 function isPaired(db, aId, bId) {
-  return !!db.prepare('SELECT id FROM pairs WHERE (user1_id = ? AND user2_id = ?) OR (user1_id = ? AND user2_id = ?)').get(aId, bId, bId, aId);
+  return !!db.prepare('SELECT user_id FROM pairs WHERE user_id = ? AND partner_id = ?').get(aId, bId);
+}
+
+/** Returns the current partner row for a user, or undefined. */
+function currentPair(db, userId) {
+  return db.prepare('SELECT * FROM pairs WHERE user_id = ?').get(userId);
 }
 
 app.post('/api/pairing/request', authenticateToken, (req, res) => {
@@ -194,12 +266,14 @@ app.get('/api/pairing/status', authenticateToken, (req, res) => {
   const db = getDb();
   const incoming = db.prepare(`SELECT p.id, u.username, u.pid FROM pairings p JOIN users u ON p.requester_id = u.id WHERE p.target_pid = ? AND p.status = 'pending'`).all(req.user.pid);
   const outgoing = db.prepare('SELECT id, target_pid, status FROM pairings WHERE requester_id = ?').all(req.user.id);
-  const currentPair = db.prepare('SELECT * FROM pairs WHERE user1_id = ? OR user2_id = ?').get(req.user.id, req.user.id);
+  const currentPairRow = currentPair(db, req.user.id);
 
   let partner = null;
-  if (currentPair) {
-    const partnerId = currentPair.user1_id === req.user.id ? currentPair.user2_id : currentPair.user1_id;
-    partner = db.prepare('SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?').get(partnerId) || null;
+  if (currentPairRow) {
+    partner =
+      db
+        .prepare('SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?')
+        .get(currentPairRow.partner_id) ?? null;
   }
 
   res.json({ incoming, outgoing, partner });
@@ -212,11 +286,37 @@ app.post('/api/pairing/accept', authenticateToken, (req, res) => {
     const db = getDb();
     const request = db.prepare('SELECT * FROM pairings WHERE id = ?').get(requestId);
     if (!request || request.target_pid !== req.user.pid) return res.status(403).json({ error: 'Invalid request' });
+    if (request.status !== 'pending') return res.status(400).json({ error: 'This invite was already handled' });
+
+    const target = db.prepare('SELECT id FROM users WHERE pid = ?').get(request.target_pid);
+    if (!target) return res.status(404).json({ error: 'User not found' });
+
+    // One partner, at a time. The question is "is EITHER party already paired with
+    // anyone", not "are these two already paired" — checking the latter lets a
+    // paired user accept a second partner and then hit the pairs PRIMARY KEY.
+    // v0.0.2 checked nothing, so a user could accumulate unlimited pairs and
+    // `SELECT * FROM pairs WHERE user1_id = ? OR user2_id = ?` with .get()
+    // returned an ARBITRARY one — meaning Compose could silently post a letter to
+    // whichever partner the query happened to surface first.
+    const alreadyPaired = db
+      .prepare('SELECT user_id FROM pairs WHERE user_id IN (?, ?) LIMIT 1')
+      .get(request.requester_id, target.id);
+
+    if (alreadyPaired) {
+      db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('superseded', requestId);
+      return res.status(409).json({
+        error: 'One of you is already paired. Unpair before accepting someone new.',
+      });
+    }
 
     db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('accepted', requestId);
-    db.prepare('INSERT INTO pairs (user1_id, user2_id) VALUES (?, ?)').run(request.requester_id, req.user.id);
+    // Two rows, one per user. user_id is the PRIMARY KEY, so a second pairing for
+    // either party fails loudly here instead of silently accumulating.
+    const insertPair = db.prepare('INSERT INTO pairs (user_id, partner_id) VALUES (?, ?)');
+    insertPair.run(request.requester_id, target.id);
+    insertPair.run(target.id, request.requester_id);
     db.prepare('INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)')
-      .run(request.requester_id, 'pairing_accepted', 'Pairing Accepted', `${req.user.username} accepted your pairing request!`);
+      .run(request.requester_id, 'pairing_accepted', 'Pairing accepted', `${req.user.username} accepted your pairing request!`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Could not accept pairing' });
@@ -241,7 +341,8 @@ app.post('/api/pairing/reject', authenticateToken, (req, res) => {
 
 app.delete('/api/pairs/unpair', authenticateToken, (req, res) => {
   try {
-    getDb().prepare('DELETE FROM pairs WHERE user1_id = ? OR user2_id = ?').run(req.user.id, req.user.id);
+    // Both rows are removed together so the two sides can never disagree.
+    getDb().prepare('DELETE FROM pairs WHERE user_id = ? OR partner_id = ?').run(req.user.id, req.user.id);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Could not unpair' });
@@ -273,12 +374,31 @@ function pageParams(req) {
   return { limit, cursor: Number.isInteger(cursor) ? cursor : null };
 }
 
+/**
+ * Letters are paginated by a monotonic id cursor, oldest first.
+ *
+ * Delivery gating: a letter with a future `delivered_at` is visible ONLY to its
+ * sender, who should see it sitting in transit. The recipient sees nothing until
+ * it arrives. v0.0.2 stored `delivered_at` and never filtered on it, so the
+ * "Deliver no earlier than" date was decorative — scheduled mail arrived at once.
+ */
 app.get('/api/letters/sync', authenticateToken, (req, res) => {
   const { limit, cursor } = pageParams(req);
   const db = getDb();
-  const letters = cursor === null
-    ? db.prepare('SELECT * FROM letters WHERE sender_id = ? OR recipient_id = ? ORDER BY id ASC LIMIT ?').all(req.user.id, req.user.id, limit)
-    : db.prepare('SELECT * FROM letters WHERE (sender_id = ? OR recipient_id = ?) AND id > ? ORDER BY id ASC LIMIT ?').all(req.user.id, req.user.id, cursor, limit);
+  const now = new Date().toISOString();
+
+  const base = `
+    SELECT * FROM letters
+    WHERE (
+      sender_id = ?
+      OR (recipient_id = ? AND (delivered_at IS NULL OR delivered_at <= ?))
+    )`;
+
+  const letters =
+    cursor === null
+      ? db.prepare(`${base} ORDER BY id ASC LIMIT ?`).all(req.user.id, req.user.id, now, limit)
+      : db.prepare(`${base} AND id > ? ORDER BY id ASC LIMIT ?`).all(req.user.id, req.user.id, now, cursor, limit);
+
   res.json(letters);
 });
 
@@ -309,28 +429,21 @@ app.put('/api/notifications/read', authenticateToken, (req, res) => {
   res.json({ success: true });
 });
 
-const jellyfin = require('./jellyfin');
+// Jellyfin integration removed (V2 plan step 8). Browsing a shared media server is
+// not correspondence — it was a different product bolted onto this one, and it
+// dragged in an unauthenticated image origin that fought our CSP.
+// Encrypted keepsakes attached to letters replace it.
 
-app.get('/api/jellyfin/libraries', authenticateToken, async (req, res) => {
-  const libraries = await jellyfin.getLibraries();
-  res.json(libraries);
-});
-
-app.get('/api/jellyfin/items', authenticateToken, async (req, res) => {
-  const { libraryId } = req.query;
-  if (!libraryId) return res.status(400).json({ error: 'libraryId is required' });
-  const items = await jellyfin.getItems(libraryId);
-  const itemsWithImages = items.map(item => ({
-    ...item,
-    imageUrl: jellyfin.getImageUrl(item.Id),
-    streamUrl: item.Type === 'Audio' ? jellyfin.getStreamUrl(item.Id) : null
-  }));
-  res.json(itemsWithImages);
-});
-
-app.get('/api/jellyfin/status', authenticateToken, (req, res) => {
-  res.json({ configured: jellyfin.isConfigured() });
-});
+// Uploads are served only to an authenticated request.
+// v0.0.2 mounted this world-readable at /uploads/<uuid>, which put every photo in
+// plaintext on a public URL and quietly contradicted the E2E promise.
+app.use(
+  '/uploads',
+  authenticateToken,
+  express.static(uploadsDir, {
+    setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
+  }),
+);
 
 // DB Reset: disabled in production; otherwise requires ADMIN_TOKEN. Never logged.
 app.post('/api/admin/reset-db', authenticateToken, (req, res) => {

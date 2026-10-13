@@ -14,8 +14,17 @@ CREATE TABLE IF NOT EXISTS users (
   encrypted_private_key TEXT, pid TEXT UNIQUE NOT NULL, age INTEGER, birthday TEXT,
   favorite_food TEXT, bio TEXT DEFAULT '', avatar_url TEXT, profile_data TEXT,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
+-- One row PER USER, not per relationship.
+--
+-- v0.0.2 stored one row per pairing (user1_id, user2_id) with no uniqueness at
+-- all, so a user could hold many pairs, and the lookup
+-- "SELECT * FROM pairs WHERE user1_id = ? OR user2_id = ?" returned an arbitrary
+-- one -- which is how a letter could be silently delivered to the wrong partner.
+-- A UNIQUE index cannot fix that on a two-column table (a user can appear as
+-- user1 in one row and user2 in another). Making user_id the PRIMARY KEY makes
+-- "one partner at a time" a storage guarantee, not a convention.
 CREATE TABLE IF NOT EXISTS pairs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, user1_id INTEGER NOT NULL, user2_id INTEGER NOT NULL,
+  user_id INTEGER PRIMARY KEY, partner_id INTEGER NOT NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS letters (
   id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id INTEGER NOT NULL, recipient_id INTEGER NOT NULL,
@@ -32,6 +41,7 @@ CREATE TABLE IF NOT EXISTS photos (
   filename TEXT NOT NULL, filepath TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
 CREATE INDEX IF NOT EXISTS idx_letters_sender_recipient ON letters(sender_id, recipient_id);
 CREATE INDEX IF NOT EXISTS idx_pairings_status ON pairings(status);
+CREATE INDEX IF NOT EXISTS idx_letters_recipient ON letters(recipient_id, delivered_at);
 `;
 
 function initDB() {

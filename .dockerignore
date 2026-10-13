@@ -1,0 +1,37 @@
+# Keep the build context small and reproducible.
+# Critically: node_modules here would shadow the clean `npm ci` inside the image,
+# and data/ + uploads/ are host state that must never be baked into a layer.
+
+.git
+.github
+.gitignore
+
+node_modules
+client/node_modules
+
+# Host runtime state
+data
+uploads
+
+# Scratch
+tmp
+dist
+client/dist
+
+# Docs and design artifacts are not needed to build or run
+docs
+*.md
+!server/**/*.md
+photos
+colors.html
+
+# Vite/env noise
+.env
+.env.*
+!.env.example
+*.local
+.vscode
+.idea
+.DS_Store
+*.log
+npm-debug.log*

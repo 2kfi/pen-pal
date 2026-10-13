@@ -1,68 +1,167 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useLetters } from '../stores/letters';
-import { EnvelopeIcon, PenIcon } from '../components/Icons';
+import { sortNewestFirst, useLetters, type Letter } from '../stores/letters';
+import { useAuth } from '../stores/auth';
+import { activeKey } from '../lib/vault';
+import { isEnvelope, openLetter } from '../lib/crypto';
+import { previewText } from '../lib/letterBody';
 
-const WINDOW = 50;
+type NodeState =
+  | { kind: 'transit'; arrivesAt: string }
+  | { kind: 'text'; excerpt: string }
+  | { kind: 'sealed' }
+  | { kind: 'error' };
 
-export default function Letters() {
-  const { items, hasMore, loading, error, fetchMore } = useLetters();
-  const [rendered, setRendered] = useState(WINDOW);
+function postmark(letter: Letter, isMine: boolean): string {
+  const date = new Date(letter.sent_at).toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+  return `${date} · ${isMine ? 'sent' : 'received'}`;
+}
+
+/**
+ * One letter on the spine.
+ *
+ * The excerpt is real decrypted text, not a placeholder. v0.0.2 showed
+ * "(encrypted letter)" for every row because nothing ever decrypted anything.
+ */
+function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
+  const me = useAuth((s) => s.user);
+  const [state, setState] = useState<NodeState | null>(null);
 
   useEffect(() => {
-    if (items.length === 0) void fetchMore();
-  }, [items.length, fetchMore]);
+    const key = activeKey();
 
-  const visible = items.length > WINDOW ? items.slice(0, rendered) : items;
-  const hidden = items.length - visible.length;
+    if (letter.delivered_at && new Date(letter.delivered_at) > new Date()) {
+      setState({
+        kind: 'transit',
+        arrivesAt: new Date(letter.delivered_at!).toLocaleString(),
+      });
+      return;
+    }
+
+    const parsed: unknown = safeParse(letter.encrypted_content);
+    if (!isEnvelope(parsed) || !key || !me) {
+      setState({ kind: 'sealed' });
+      return;
+    }
+
+    let cancelled = false;
+    void openLetter(parsed, key, me.id)
+      .then((plaintext) => {
+        if (!cancelled) setState({ kind: 'text', excerpt: previewText(plaintext) });
+      })
+      .catch(() => {
+        if (!cancelled) setState({ kind: 'error' });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [letter, me]);
+
+  const inTransit = state?.kind === 'transit';
+
+  return (
+    <Link to={`/letters/${letter.id}`} className={`letter${inTransit ? ' transit' : ''}`}>
+      <div className="letter-state">
+        {postmark(letter, isMine)}
+        {inTransit && <span> · in transit</span>}
+      </div>
+
+      {state === null && <p className="letter-excerpt muted">Opening…</p>}
+
+      {state?.kind === 'transit' && (
+        <>
+          <p className="letter-excerpt">Still travelling.</p>
+          <p className="muted">Arrives {state.arrivesAt}</p>
+        </>
+      )}
+
+      {state?.kind === 'text' && <p className="letter-excerpt">{state.excerpt}</p>}
+
+      {state?.kind === 'sealed' && (
+        <>
+          <p className="letter-excerpt muted">Sealed.</p>
+          <span className="seal" aria-hidden />
+        </>
+      )}
+
+      {state?.kind === 'error' && <p className="letter-excerpt muted">Could not be opened.</p>}
+    </Link>
+  );
+}
+
+export default function Letters() {
+  const { items, hasMore, loading, error, fetchMore, loaded } = useLetters();
+  const me = useAuth((s) => s.user);
+
+  useEffect(() => {
+    if (!loaded && !loading) void fetchMore();
+  }, [loaded, loading, fetchMore]);
+
+  const ordered = sortNewestFirst(items);
+  const hasPartner = useLettersReady();
 
   return (
     <div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-        <h1 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          <EnvelopeIcon /> Letters
-        </h1>
-        <Link to="/letters/new" style={{ marginLeft: 'auto' }}>
-          <button className="primary" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-            <PenIcon size={16} /> Compose
+      <h1>Your archive</h1>
+
+      <div style={{ marginBlock: 'var(--space-4)' }}>
+        <Link to="/letters/new" className="btn-primary-link">
+          <button className="primary" type="button">
+            Write a letter
           </button>
         </Link>
       </div>
 
-      {error && <p className="muted">{error}</p>}
-
-      <div className="stream">
-        <svg className="spine" width="24" height="100%" preserveAspectRatio="none" aria-hidden>
-          <path d="M12 0 C 4 120, 20 240, 12 360 C 4 480, 20 600, 12 800 L 12 2000" />
-        </svg>
-        {visible.map((l) => (
-          <Link key={l.id} to={`/letters/${l.id}`} className="letter-card">
-            <span className="letter-dot" aria-hidden />
-            <span className="muted">#{l.id} · {l.sent_at}</span>
-            <p>{previewOf(l.encrypted_content)}</p>
-          </Link>
-        ))}
-        {items.length === 0 && !loading && <p className="muted">No letters yet.</p>}
-      </div>
-
-      {hidden > 0 && (
-        <button onClick={() => setRendered((r) => r + WINDOW)}>Show more ({hidden} remaining)</button>
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
       )}
-      {hidden <= 0 && hasMore && (
-        <button onClick={() => void fetchMore()} disabled={loading}>
-          {loading ? 'Loading…' : 'Load older'}
+
+      {ordered.length === 0 && !loading && (
+        <div className="card">
+          <h2>Nothing here yet</h2>
+          <p className="muted">
+            {hasPartner
+              ? 'Write the first letter. It will travel, and arrive when it arrives.'
+              : 'You need a pen pal first. Send an invite, then start writing.'}
+          </p>
+        </div>
+      )}
+
+      {ordered.length > 0 && (
+        <div className="archive">
+          <span className="spine" aria-hidden />
+          {ordered.map((letter) => (
+            <LetterNode key={letter.id} letter={letter} isMine={letter.sender_id === me?.id} />
+          ))}
+        </div>
+      )}
+
+      {hasMore && ordered.length > 0 && (
+        <button type="button" onClick={() => void fetchMore()} disabled={loading}>
+          {loading ? 'Fetching…' : 'Load older letters'}
         </button>
       )}
     </div>
   );
 }
 
-// ponytail: encrypted blobs aren't readable; show a short safe prefix, never HTML
-function previewOf(content: string): string {
+/** Cheap pairing probe so the empty state can say something useful. */
+function useLettersReady(): boolean {
+  const { items } = useLetters();
+  return items.length > 0;
+}
+
+function safeParse(value: string): unknown {
   try {
-    const o = JSON.parse(content) as { content?: string };
-    return typeof o.content === 'string' ? '(encrypted letter)' : content.slice(0, 120);
+    return JSON.parse(value);
   } catch {
-    return content.slice(0, 120);
+    return null;
   }
 }

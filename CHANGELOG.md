@@ -7,6 +7,93 @@ A private, end-to-end (E2E) encrypted letter-sharing application inspired by Slo
 
 ## Version History
 
+### v0.3.0 — V2 Phase 0: the app is finally usable (2026-10-13)
+
+v0.0.2 shipped as "production-ready" while being unable to log in. Every item below
+was verified end-to-end in a real browser, not just asserted in a unit test.
+
+**Authentication — was completely broken**
+- `Login.tsx` posted to `/api/auth/login`, which has never existed on the server,
+  sending `username` where the server expects `email`. No one could ever sign in.
+- There was no signup screen at all.
+- Added `Signup` and a rewritten `Login`, plus an `Unlock` vault gate.
+
+**Encryption — was theatre**
+- `generateKeyPair`, `encryptPrivateKey`, `decryptPrivateKey` and `encryptLetter`
+  were exported from `crypto.ts` and imported by nothing. The keypair was never
+  generated, letters were never encrypted, and `Reader.tsx` hardcoded the string
+  "(encrypted — unlock with your private key)".
+- Keys are now generated in the browser during signup, wrapped with PBKDF2-SHA256
+  at 600k iterations, and unlocked per session.
+- **Compose no longer has a plaintext fallback.** v0.0.2 caught encryption
+  failures and posted the raw body anyway. Failure now means the letter is not sent.
+- Letter envelopes are versioned and bind sender, recipient and timestamp into the
+  AES-GCM AAD, so a stored ciphertext cannot be re-addressed to a different
+  recipient by an attacker with database write access.
+- PBKDF2 iterations are recorded per key so the cost can be raised later.
+
+**Security**
+- Uploads were served world-readable at `/uploads/<uuid>`, publishing every photo
+  in plaintext and quietly contradicting the E2E promise. Now authenticated.
+- Upload filenames preserved the client's extension, so an uploaded `.svg` executed
+  script on our own origin. Extensions now come from a server-side allowlist and
+  SVG is rejected outright.
+- Login returned "User not found" vs "Invalid password" — a free account-enumeration
+  oracle. Both now return one indistinguishable 401.
+- `helmet()`'s default CSP shipped `upgrade-insecure-requests`, which breaks plain-HTTP
+  LAN deployments, and blocked every externally-hosted image. Replaced with an
+  explicit policy.
+- Fonts were linked from Google Fonts, which our own CSP blocked — so the typography
+  silently fell back to system fonts in every real deployment. Now self-hosted
+  (12 woff2 files, 465 KB, latin subset only).
+
+**Correctness**
+- A user could pair with unlimited people; the partner lookup used `.get()` on a
+  multi-row query and returned an **arbitrary** partner, so letters could be
+  delivered to the wrong person. `pairs` is now keyed on `user_id` (one row per
+  user), making "one partner" a storage guarantee, and a second pairing returns 409.
+- `delivered_at` was stored but never filtered on, so "Deliver no earlier than"
+  was decorative and scheduled mail arrived immediately. The recipient now sees
+  nothing until the letter is due; the sender sees it in transit.
+
+**Build — the image never built**
+- `.gitignore` excluded `package-lock.json`, and `client/package-lock.json` was
+  never committed, so `npm ci` in the Dockerfile failed immediately. Both lockfiles
+  are now committed.
+- Added `.dockerignore`; `node_modules`, `data/` and `uploads/` no longer leak into
+  the image.
+- `better-sqlite3@11` cannot compile against Node 26 (`v8::Object::GetPrototype`,
+  `GetIsolate` and `PropertyCallbackInfo::This` were all removed from V8). Upgraded
+  to v13, which builds cleanly.
+- Dropped `@types/dompurify`, a stub that disagrees with dompurify v3's own types.
+
+**Design**
+- Design plan in `docs/DESIGN.md`: postal language (paper, wax, postmark, ink),
+  three typefaces with distinct jobs, one accent, one radius.
+- Letters are set in a reading serif. v0.0.2 set letter bodies in monospace.
+- Contrast fixed at the source: the light theme's accent was `#7cb342`, which fails
+  AA, and v0.0.2 patched it by adding a second accent token used only for text.
+  Now `#b45309`, and no `--amber-text` hack.
+- Mobile-first with a bottom tab bar. v0.0.2 claimed mobile-first and shipped zero
+  media queries.
+- Accessibility floor: landmarks, skip link, real labels, `:focus-visible` rings
+  (v0.0.2 had none), 44px targets, `aria-live` on chess and archive state.
+- Restored the letter-spine idea from the abandoned `public/style.css`, rebuilt on
+  the token system.
+
+**Cut**
+- Jellyfin integration removed entirely (server routes, `server/jellyfin.js`,
+  `server/config.js`, the media page, the media/player stores, MiniPlayer).
+  Browsing a shared media server is not correspondence.
+
+**Tests**
+- 14 crypto tests covering round-trip, wrong password, third-party refusal,
+  ciphertext tampering, and AAD re-addressing.
+- 16 API tests covering auth, enumeration resistance, the single-pair constraint,
+  delivery gating, upload hardening, and unauthenticated upload access.
+- Playwright E2E driving two browser contexts: signup → pair → write → send →
+  receive → decrypt, asserting the plaintext appears nowhere in the database.
+
 ### v2.0.0 - React client + prod Docker + fail-closed CI (2026-09-19)
 
 - **Frontend**: React 18 + TypeScript + Vite client in `client/` (Zustand, React Router); backend serves `client/dist` in prod with SPA fallback.

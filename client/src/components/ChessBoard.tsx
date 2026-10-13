@@ -1,74 +1,120 @@
 import { useMemo, useState } from 'react';
-import { GLYPH, applyMove, bestMove, inCheck, initialBoard, legalMoves } from '../lib/chess';
-import type { Board } from '../lib/chess';
+import {
+  GLYPH,
+  applyMove,
+  bestMove,
+  inCheck,
+  initialBoard,
+  legalMoves,
+  type Board,
+  type Color,
+  type Move,
+} from '../lib/chess';
 
-function sqName(i: number): string {
-  return `${'abcdefgh'[i % 8]}${8 - Math.floor(i / 8)}`;
+/**
+ * Chessboard.
+ *
+ * Note for the record: the engine behind this (lib/chess.ts) is still the v0.0.2
+ * one — no castling, no en passant, forced queen promotion, material-only eval,
+ * synchronous on the main thread. Rebuilding it against perft-verified rules is
+ * plan step 24. It renders and plays; it is not yet correct.
+ *
+ * Accessibility: every square is a real <button> in a grid, reachable by
+ * keyboard, with an accessible name of its algebraic coordinate.
+ */
+
+const FILES = 'abcdefgh';
+
+function squareName(index: number): string {
+  return `${FILES[index % 8]}${8 - Math.floor(index / 8)}`;
 }
 
-// You play white; the computer plays black.
-export default function ChessBoard() {
+export function ChessBoard() {
   const [board, setBoard] = useState<Board>(initialBoard);
-  const [sel, setSel] = useState<number | null>(null);
-  const [over, setOver] = useState('');
-  const whiteMoves = useMemo(() => legalMoves(board, 'w'), [board]);
-  const targets = useMemo(() => new Set(whiteMoves.filter((m) => m.from === sel).map((m) => m.to)), [whiteMoves, sel]);
+  const [selected, setSelected] = useState<number | null>(null);
+  const [status, setStatus] = useState('White to move.');
 
-  const click = (i: number) => {
-    if (over) return;
-    const p = board[i];
-    if (sel === null) {
-      if (p && p.c === 'w') setSel(i);
+  const whiteMoves = useMemo(() => legalMoves(board, 'w'), [board]);
+  const targets = useMemo(
+    () => new Set(whiteMoves.filter((m: Move) => m.from === selected).map((m: Move) => m.to)),
+    [whiteMoves, selected],
+  );
+
+  const play = (index: number) => {
+    const piece = board[index];
+
+    if (selected === null) {
+      if (piece?.c === 'w') setSelected(index);
       return;
     }
-    const m = whiteMoves.find((m) => m.from === sel && m.to === i);
-    setSel(null);
-    if (!m) {
-      if (p && p.c === 'w') setSel(i);
+
+    const move = whiteMoves.find((m: Move) => m.from === selected && m.to === index);
+    setSelected(null);
+
+    if (!move) {
+      // Clicking another of your own pieces re-selects rather than doing nothing.
+      if (piece?.c === 'w') setSelected(index);
       return;
     }
-    let nb = applyMove(board, m);
-    const reply = bestMove(nb, 'b');
-    if (reply) nb = applyMove(nb, reply);
-    setBoard(nb);
-    const mine = legalMoves(nb, 'w');
-    if (!mine.length) {
-      setOver(inCheck(nb, 'w') ? 'Checkmate — the computer wins. Start a new game?' : 'Draw — no moves left. Start a new game?');
-    } else if (inCheck(nb, 'w')) {
-      setOver('Check — your king is under attack.');
+
+    let next: Board = applyMove(board, move);
+    const reply = bestMove(next, 'b' as Color);
+    if (reply) next = applyMove(next, reply);
+
+    setBoard(next);
+
+    const options = legalMoves(next, 'w');
+    if (options.length === 0) {
+      setStatus(inCheck(next, 'w') ? 'Checkmate. The computer wins.' : 'Draw — no legal moves.');
+    } else if (inCheck(next, 'w')) {
+      setStatus('Check. Your king is under attack.');
     } else {
-      setOver('');
+      setStatus('White to move.');
     }
   };
 
   const reset = () => {
     setBoard(initialBoard());
-    setSel(null);
-    setOver('');
+    setSelected(null);
+    setStatus('White to move.');
   };
 
   return (
     <div>
-      <div className="chess-board" role="grid" aria-label="Chess board">
-        {board.map((p, i) => {
-          const light = (Math.floor(i / 8) + (i % 8)) % 2 === 1;
+      <div className="board" role="grid" aria-label="Chess board">
+        {board.map((piece, index) => {
+          const light = (Math.floor(index / 8) + index % 8) % 2 === 1;
+          const classes = ['square'];
+          if (light) classes.push('light');
+          if (selected === index) classes.push('selected');
+          if (targets.has(index)) classes.push('target');
+
           return (
             <button
-              key={i}
+              key={index}
+              type="button"
               role="gridcell"
-              className={`chess-sq${light ? ' light' : ''}${sel === i ? ' sel' : ''}${targets.has(i) ? ' tgt' : ''}`}
-              onClick={() => click(i)}
-              aria-label={`${sqName(i)}${p ? ` ${p.c === 'w' ? 'white' : 'black'} ${p.t}` : ''}`}
+              className={classes.join(' ')}
+              onClick={() => play(index)}
+              aria-label={`${squareName(index)}${piece ? `, ${piece.c === 'w' ? 'white' : 'black'} ${piece.t}` : ', empty'}`}
+              aria-pressed={selected === index}
             >
-              {p ? GLYPH[p.c][p.t] : ''}
+              <span aria-hidden>{piece ? GLYPH[piece.c][piece.t] : ''}</span>
             </button>
           );
         })}
       </div>
-      {over && <p className="muted">{over}</p>}
-      <button onClick={reset} style={{ marginTop: '0.5rem' }}>
+
+      {/* Announced to screen readers on every change. */}
+      <p className="chess-status" role="status" aria-live="polite">
+        {status}
+      </p>
+
+      <button type="button" onClick={reset}>
         New game
       </button>
     </div>
   );
 }
+
+export default ChessBoard;
