@@ -20,6 +20,7 @@
 
 import { create } from 'zustand';
 import { useVault } from '../lib/vault';
+import { refreshSession, setAccessToken } from '../lib/session';
 
 export interface UserProfile {
   id: number;
@@ -80,18 +81,10 @@ function readStoredProfile(): UserProfile | null {
 }
 
 /**
- * The access token lives here and nowhere else. A closure rather than React
- * state so there is exactly one copy to audit.
+ * The access token itself lives in lib/session, shared with lib/api so the two
+ * cannot mint different tokens or race a rotation. This module holds the
+ * profile and the auth flags; session.ts holds the credential.
  */
-let accessToken: string | null = null;
-
-export function getAccessToken(): string | null {
-  return accessToken;
-}
-
-function setAccessToken(token: string | null): void {
-  accessToken = token;
-}
 
 export const useAuth = create<AuthState>((set) => ({
   authenticated: false,
@@ -119,26 +112,12 @@ export const useAuth = create<AuthState>((set) => ({
    * signed-out path — not an error.
    */
   restore: async () => {
-    try {
-      const res = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'X-Requested-With': 'penpal' },
-      });
-      if (!res.ok) {
-        setAccessToken(null);
-        set({ authenticated: false, restoring: false });
-        return false;
-      }
-      const data = (await res.json()) as { token: string };
-      setAccessToken(data.token);
-      set({ authenticated: true, restoring: false });
-      return true;
-    } catch {
-      setAccessToken(null);
-      set({ authenticated: false, restoring: false });
-      return false;
-    }
+    // Delegated to lib/session so that a second caller — StrictMode's double
+    // mount, a remount, api.ts hitting a 401 at the same moment — waits on the
+    // SAME request instead of presenting the single-use refresh token twice.
+    const ok = await refreshSession();
+    set({ authenticated: ok, restoring: false });
+    return ok;
   },
 
   refreshProfile: async () => {

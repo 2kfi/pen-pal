@@ -1,0 +1,839 @@
+/**
+ * /style — the design system, rendered (plan step 17).
+ *
+ * Everything here is `sg-` prefixed and every colour, radius, duration and
+ * measurement comes from tokens.css at run time. Nothing in this file invents a
+ * value; it only arranges specimens so they can be compared against each other
+ * and against their own contract.
+ *
+ * Two rules this file follows, because a gallery that flatters itself is worse
+ * than no gallery:
+ *
+ *   1. A failed check is shown as a failure, in red, with the number that failed
+ *      it. Nothing here hides a token that misses its threshold.
+ *   2. Every specimen is the real component markup carrying the real class. A
+ *      screenshot of a component proves it existed once; the class proves it is
+ *      still true now. There is not one `background: #123456` below.
+ */
+
+/* ------------------------------------------------------------------ *
+ * page shell                                                          *
+ * ------------------------------------------------------------------ */
+
+.sg {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding-bottom: var(--space-7);
+}
+
+.sg-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sg-head h1 {
+  margin: 0;
+}
+
+.sg-lede {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+}
+
+.sg-note {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+/* The reason this page is dev-only, said plainly rather than as a legal notice. */
+.sg-gate {
+  padding: var(--space-3) var(--space-4);
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  font-size: var(--type-sm);
+  max-width: var(--measure);
+}
+
+/* ------------------------------------------------------------------ *
+ * the headline verdict                                                *
+ * ------------------------------------------------------------------ */
+
+/* Two words and a number, because "there may be an issue" is not a verdict. */
+.sg-verdict {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+}
+
+.sg-verdict.is-fail {
+  border-color: var(--danger);
+  border-left-width: 3px;
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.sg-verdict-word {
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wax);
+}
+
+.sg-verdict.is-fail .sg-verdict-word {
+  color: var(--danger);
+}
+
+.sg-verdict-count {
+  color: var(--muted);
+}
+
+.sg-failures {
+  margin: 0;
+  padding-left: var(--space-5);
+  font-size: var(--type-sm);
+  max-width: var(--measure);
+}
+
+.sg-failures li {
+  margin-bottom: var(--space-1);
+}
+
+/* ------------------------------------------------------------------ *
+ * jump nav                                                           *
+ * ------------------------------------------------------------------ */
+
+.sg-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sg-jump a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--target-min);
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  color: var(--text);
+}
+
+.sg-jump a:hover {
+  border-color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * sections                                                           *
+ * ------------------------------------------------------------------ */
+
+.sg-section > h2 {
+  margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--rule);
+}
+
+.sg-section > h3 {
+  margin: var(--space-5) 0 var(--space-2);
+  font-size: var(--type-md);
+}
+
+.sg-subnote {
+  margin: 0 0 var(--space-3);
+  max-width: var(--measure);
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * the two themes, side by side                                       *
+ * ------------------------------------------------------------------ */
+
+/* `data-theme` is set on these elements, so every token inside resolves to
+   that theme's value regardless of what the reader is currently looking at.
+   Both themes are on one page, at once, because a palette checked one theme at
+   a time is a palette checked half as often. */
+.sg-themes {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+}
+
+@media (min-width: 900px) {
+  .sg-themes {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-6);
+  }
+}
+
+.sg-theme {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--ink);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.sg-theme > h4 {
+  margin: 0;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * a contrast row — the specimen IS the number                         *
+ * ------------------------------------------------------------------ */
+
+.sg-check {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-1) var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+/* The swatch is the pairing, drawn: the background token, with the foreground
+   token's real glyphs on top of it. If the contrast claim were a lie this would
+   be the lie, visible, at the size the product actually uses. */
+.sg-check-spec {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--sg-bg);
+  color: var(--sg-fg);
+  border: 1px solid var(--sg-fg);
+  border-radius: var(--radius);
+  font-family: var(--font-postmark);
+  font-size: var(--type-sm);
+  min-height: var(--target-min);
+}
+
+.sg-check-where {
+  grid-column: 1 / -1;
+  font-size: var(--type-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.sg-check-where code {
+  font-family: var(--font-postmark);
+  color: var(--text);
+}
+
+/* PASS and FAIL are words, never a colour alone. WCAG 2.2 SC 1.4.1 applies to
+   this page too, and a gallery that fails its own accessibility floor is a
+   fairly useless instrument. */
+.sg-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.75rem;
+  min-height: var(--target-min);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-chip);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sg-flag.is-pass {
+  border-color: var(--wax);
+  color: var(--wax);
+  background: var(--wax-wash);
+}
+
+.sg-flag.is-fail {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+/* ------------------------------------------------------------------ *
+ * the raw token grid                                                 *
+ * ------------------------------------------------------------------ */
+
+.sg-tokens {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sg-token {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.sg-token-swatch {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 3.5rem;
+  padding: 0 var(--space-2);
+  background: var(--sg-value);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* The label sits ABOVE the swatch rather than on it.
+ *
+ * Every other token is opaque, so painting its value in its own colour on top
+ * of itself is legible. A wash token is 9% opacity: the cell would be
+ * effectively the page ground with a faint tint on it, and the value printed in
+ * that faint tint would be unreadable. So the value is printed on the page
+ * ground, over the swatch, in --text — which is legible for every token,
+ * including the washes. */
+.sg-token-swatch code {
+  position: relative;
+  z-index: 1;
+  color: var(--text);
+}
+
+/* A hairline so a swatch that is nearly the page ground (--ink, --text) still
+   reads as a swatch rather than as an empty cell. */
+.sg-token-swatch::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--rule);
+  pointer-events: none;
+}
+
+.sg-token-meta {
+  padding: var(--space-2);
+  background: var(--paper);
+  border-top: 1px solid var(--rule);
+  font-size: var(--type-xs);
+  line-height: 1.45;
+}
+
+.sg-token-name {
+  font-family: var(--font-postmark);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.sg-token-value {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+}
+
+/* A token nothing references is the failure this page exists to catch, so it
+   is called out rather than listed like the rest. */
+.sg-token.is-unused {
+  border-color: var(--danger);
+  border-left-width: 3px;
+}
+
+.sg-token-contract {
+  display: block;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * type                                                                *
+ * ------------------------------------------------------------------ */
+
+.sg-family {
+  margin-bottom: var(--space-5);
+  border-top: 1px solid var(--rule);
+  padding-top: var(--space-3);
+}
+
+.sg-family-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sg-family-name {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sg-family-stack {
+  font-family: var(--muted);
+  font-size: var(--type-xs);
+  overflow-wrap: anywhere;
+}
+
+.sg-family-rule {
+  flex: 1 1 12rem;
+  font-size: var(--type-sm);
+  color: var(--muted);
+  max-width: 34ch;
+}
+
+.sg-type-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 520px) {
+  .sg-type-row {
+    grid-template-columns: 1fr;
+    gap: var(--space-1);
+  }
+}
+
+.sg-type-key {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sg-type-key span {
+  display: block;
+  color: var(--text);
+}
+
+.sg-type-sample {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* A measure ruler: the reading column, capped, with the cap drawn. */
+.sg-measure {
+  margin-top: var(--space-3);
+}
+
+.sg-measure-rule {
+  height: 1px;
+  background: var(--wax);
+}
+
+/* ------------------------------------------------------------------ *
+ * space, radius, motion                                              *
+ * ------------------------------------------------------------------ */
+
+.sg-scale-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr auto;
+  gap: var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.sg-scale-bar {
+  height: var(--sg-size);
+  background: var(--wax);
+  opacity: 0.35;
+  border-radius: var(--radius);
+}
+
+.sg-scale-key {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.sg-scale-val {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+.sg-radii {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.sg-radius-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sg-radius-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4.5rem;
+  height: 4.5rem;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-pill, var(--radius));
+  color: var(--muted);
+  font-size: var(--type-2xl);
+  line-height: 1;
+}
+
+.sg-motion-row {
+  display: grid;
+  grid-template-columns: 7.5rem 5.5rem 5.5rem 1fr;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-top: 1px solid var(--rule);
+}
+
+@media (max-width: 560px) {
+  .sg-motion-row {
+    grid-template-columns: 7.5rem 1fr 1fr;
+  }
+  .sg-motion-what {
+    grid-column: 1 / -1;
+    color: var(--muted);
+    font-size: var(--type-xs);
+  }
+}
+
+.sg-motion-what {
+  font-size: var(--type-sm);
+}
+
+.sg-num {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+.sg-num.is-reduced {
+  color: var(--muted);
+}
+
+.sg-badge {
+  display: inline-block;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-chip);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sg-badge.is-on {
+  border-color: var(--wax);
+  color: var(--wax);
+  background: var(--wax-wash);
+}
+
+/* The wax at press size, positioned in the flow. */
+.sg-press-seal {
+  width: 1.75rem;
+  height: 1.75rem;
+  margin: 0;
+}
+
+/* The 44px floor, drawn at true size. */
+.sg-target {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target-min);
+  height: var(--target-min);
+  border: 1px dashed var(--rule-strong);
+  color: var(--muted);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+}
+
+/* ------------------------------------------------------------------ *
+ * parts                                                              *
+ * ------------------------------------------------------------------ */
+
+.sg-part {
+  margin-top: var(--space-5);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.sg-part-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.sg-part-name {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sg-part-class {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.sg-part-rule {
+  flex: 1 1 14rem;
+  font-size: var(--type-sm);
+  color: var(--muted);
+  max-width: 40ch;
+}
+
+.sg-row {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* `.seal-wax` is `position: absolute` in index.css because in the send moment it
+   is placed by GSAP against the envelope. Dropped into a static specimen row it
+ * therefore escapes its parent entirely and floats over whatever happens to be
+ * near the top of the viewport — which is exactly what it did. The specimen row
+   is its containing block instead. */
+.sg-row .seal-wax,
+.sg-part .seal-wax {
+  position: relative;
+  inset: auto;
+}
+
+.sg-row + .sg-row {
+  margin-top: var(--space-3);
+}
+
+/* A real field, wired, so the focus ring and the error state are the ones the
+   product ships rather than a picture of them. */
+.sg-field-demo {
+  flex: 1 1 16rem;
+  max-width: 22rem;
+  margin-bottom: 0;
+}
+
+/* The focus ring, drawn with the real token on a real control so it can be
+   compared against the 3:1 contract without tabbing into the page. */
+.sg-focus-demo {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* A closed envelope, assembled from the compose animation's own parts
+   (.seal-paper, .seal-flap, .seal-wax) so the sealed letter state is the real
+   envelope rather than an emoji. Sized down from the 9.5rem travel envelope,
+   because a specimen beside three other specimens at 1:1 reads as a mistake. */
+.sg-envelope {
+  position: relative;
+  width: 8rem;
+  height: 5rem;
+  margin: var(--space-4) 0;
+}
+
+.sg-envelope .seal-paper {
+  position: absolute;
+  inset: 0;
+  background: var(--paper-2);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  /* The two diagonals that make a rectangle read as an envelope. Drawn as a
+     gradient rather than an extra element so the specimen stays the same three
+     parts the send animation uses. */
+  background-image:
+    linear-gradient(to bottom right, transparent calc(50% - 0.5px), var(--rule) calc(50% - 0.5px), var(--rule) calc(50% + 0.5px), transparent calc(50% + 0.5px)),
+    linear-gradient(to bottom left, transparent calc(50% - 0.5px), var(--rule) calc(50% - 0.5px), var(--rule) calc(50% + 0.5px), transparent calc(50% + 0.5px));
+}
+
+/* The closed flap: the triangle that folds down over the front of the
+   envelope, sitting INSIDE the paper rather than hinged above it. That is the
+   difference between "sealed" and "an open envelope with a lid". */
+.sg-envelope .seal-flap {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 60%;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-bottom: none;
+  clip-path: polygon(0 100%, 100% 100%, 50% 0);
+  transform-origin: bottom center;
+  transform: none;
+}
+
+/* The wax straddles the flap's point, as wax does. */
+.sg-envelope .seal-wax {
+  position: absolute;
+  left: 50%;
+  top: 40%;
+  width: 1.5rem;
+  height: 1.5rem;
+  margin: -0.75rem 0 0 -0.75rem;
+}
+
+.sg-states {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-5);
+  padding-left: var(--space-5);
+  position: relative;
+}
+
+.sg-state {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.sg-state-label {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.sg-state-desc {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+/* The wax sits bottom-right on an opened letter, per DESIGN §5. */
+.sg-letter-open .seal {
+  margin-top: 0;
+  align-self: flex-end;
+}
+
+.sg-letters {
+  position: relative;
+  padding-left: var(--space-5);
+}
+
+.sg-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* A status chip. DESIGN §9 lists Chip as a component; it did not exist in the
+   stylesheet, so this specimen is what it should look like and the note above
+   it says so rather than pretending it shipped. */
+.sg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 1.75rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-chip);
+  background: var(--paper);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.06em;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.sg-chip.is-transit {
+  border-color: var(--in-transit);
+  color: var(--in-transit);
+}
+
+.sg-chip.is-wax {
+  border-color: var(--wax);
+  color: var(--wax);
+  background: var(--wax-wash);
+}
+
+.sg-chip.is-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.sg-board-demo {
+  width: min(100%, 22rem);
+}
+
+/* ------------------------------------------------------------------ *
+ * the honest ending                                                   *
+ * ------------------------------------------------------------------ */
+
+.sg-foot {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.sg-foot ul {
+  margin: 0;
+  padding-left: var(--space-5);
+  max-width: var(--measure);
+  font-size: var(--type-sm);
+}
+
+.sg-foot li {
+  margin-bottom: var(--space-1);
+}
+
+.sg-foot code {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+}
+
+/* This page is dev-only. In a production build `import.meta.env.DEV` is false,
+   StyleGuide redirects, and this import is dead code the bundler drops. The
+   rule is kept anyway so a stray element could never paint in production. */
+.sg[hidden] {
+  display: none;
+}

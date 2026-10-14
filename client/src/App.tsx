@@ -11,6 +11,8 @@ const Reader = lazy(() => import('./pages/Reader'));
 const Pairing = lazy(() => import('./pages/Pairing'));
 const Play = lazy(() => import('./pages/Play'));
 const Settings = lazy(() => import('./pages/Settings'));
+const Rituals = lazy(() => import('./pages/Rituals'));
+const StyleGuide = lazy(() => import('./pages/StyleGuide'));
 
 /**
  * The access token lives in memory only (see stores/auth), so a page load has
@@ -105,6 +107,12 @@ export default function App() {
               <Route path="/pairing" element={<Pairing />} />
               <Route path="/play" element={<Play />} />
               <Route path="/settings" element={<Settings />} />
+              <Route path="/rituals" element={<Rituals />} />
+              {/* The design gallery is development-only. `import.meta.env.DEV`
+                  is replaced with `false` by the bundler, so in a production
+                  build this route compiles away entirely rather than being
+                  merely unreachable — the page is not in the bundle to find. */}
+              {import.meta.env.DEV && <Route path="/style" element={<StyleGuide />} />}
             </Route>
 
             <Route path="*" element={<NotFound />} />

@@ -263,6 +263,25 @@ def main():
         shot("06-mobile", mp, full_page=True)
         print("  375px renders and signs in ✓")
 
+        # A reload must not sign you out.
+        #
+        # The access token is memory-only by design, so a page load re-mints it
+        # from the httpOnly refresh cookie. That refresh token is SINGLE-USE and
+        # the server revokes the whole family if it is presented twice — so if
+        # anything ever makes two refreshes race (StrictMode's double mount did
+        # exactly this), every single page load signs the user out everywhere.
+        # open_page() above reloads constantly but folds that failure into a
+        # confusing "selector not found", so assert it directly here.
+        print("\n9b. a reload keeps you signed in")
+        mp.reload(wait_until="networkidle")
+        try:
+            mp.wait_for_url(f"{BASE}/letters", timeout=20_000)
+            assert "/login" not in mp.url, "a reload signed the user out"
+        except Exception:
+            dump_failure(mp, "session did not survive a reload")
+            raise
+        print("  reload restores the session from the cookie ✓")
+
         print("\n10. dark + light")
         shot("07-dark", a)
         open_page(a, "/settings", PW, wait_for_selector="text=Theme")
@@ -272,6 +291,46 @@ def main():
         open_page(a, "/pairing", PW, wait_for_selector=".pid-badge")
         shot("09-pairing-light", a)
         print("  both themes render ✓")
+
+        # Plan step 25, verified where it was previously unverified: in a
+        # PRODUCTION build served over HTTP. The search module worked in Node and
+        # in the Vite dev server, but nothing imported it in the app, so the
+        # Worker was never bundled and was discoverable only in dev.
+        print("\n11. the chess search runs in a Worker")
+        open_page(a, "/play", PW, wait_for_selector="text=Against the computer")
+        a.click('button:has-text("Against the computer")')
+        # Casual, not Strong: this asserts the plumbing, and Strong takes 15s.
+        a.click('button:has-text("Casual")')
+        wait_for(a, '[data-sq="52"]', timeout=20000)
+
+        body = a.inner_text("body")
+        assert "Web Worker" in body, "the engine fell back to the main thread in a production build"
+        assert "main thread" not in body, "the engine reported a degraded transport"
+
+        # e2-e4, then let it answer.
+        a.click('[data-sq="52"]')
+        a.click('[data-sq="36"]')
+        a.wait_for_function(
+            "() => { const s = document.querySelector('.cb-status');"
+            " return s && !/thinking/i.test(s.innerText); }",
+            timeout=45000,
+        )
+        moves = a.eval_on_selector_all(".cb-moves li, .cb-movelist li, .cb-panel li",
+                                       "els => els.map(e => e.innerText.trim())")
+        assert moves, "the engine never replied: the move list is empty"
+        assert "e4" in moves[0], f"the human's own move is missing from the list: {moves[:2]!r}"
+        print(f"  engine replied: {moves[0].split()[-1]} ✓")
+        shot("10-engine", a, full_page=True)
+
+        a.set_viewport_size({"width": 375, "height": 812})
+        a.wait_for_timeout(400)
+        overflow = a.evaluate(
+            "() => document.documentElement.scrollWidth - document.documentElement.clientWidth"
+        )
+        assert overflow <= 1, f"the board overflows by {overflow}px at 375px"
+        shot("11-engine-375", a, full_page=True)
+        print("  production Worker transport, no overflow at 375px ✓")
+        a.set_viewport_size({"width": 1280, "height": 900})
 
         if errors:
             print("\nCONSOLE ERRORS:")

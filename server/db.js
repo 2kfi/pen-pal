@@ -2,64 +2,98 @@ const path = require('path');
 const fs = require('fs');
 const Database = require('better-sqlite3');
 
+const { runMigrations, migrationStatus, listMigrations } = require('./lib/migrations');
+const { logger } = require('./lib/ops/logger');
+
 const dataDir = process.env.DATA_DIR || path.join(__dirname, '../data');
 const dbPath = path.join(dataDir, 'penpal.db');
 
 let db;
 
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS users (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL, friendly_name TEXT,
-  email TEXT UNIQUE NOT NULL, password_hash TEXT NOT NULL, public_key TEXT,
-  encrypted_private_key TEXT, pid TEXT UNIQUE NOT NULL, age INTEGER, birthday TEXT,
-  favorite_food TEXT, bio TEXT DEFAULT '', avatar_url TEXT, profile_data TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
--- One row PER USER, not per relationship.
---
--- v0.0.2 stored one row per pairing (user1_id, user2_id) with no uniqueness at
--- all, so a user could hold many pairs, and the lookup
--- "SELECT * FROM pairs WHERE user1_id = ? OR user2_id = ?" returned an arbitrary
--- one -- which is how a letter could be silently delivered to the wrong partner.
--- A UNIQUE index cannot fix that on a two-column table (a user can appear as
--- user1 in one row and user2 in another). Making user_id the PRIMARY KEY makes
--- "one partner at a time" a storage guarantee, not a convention.
-CREATE TABLE IF NOT EXISTS pairs (
-  user_id INTEGER PRIMARY KEY, partner_id INTEGER NOT NULL,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS letters (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, sender_id INTEGER NOT NULL, recipient_id INTEGER NOT NULL,
-  encrypted_content TEXT NOT NULL, encrypted_metadata TEXT, photo_paths TEXT,
-  sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, delivered_at DATETIME, sync_version INTEGER DEFAULT 0);
-CREATE TABLE IF NOT EXISTS pairings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, requester_id INTEGER NOT NULL, target_pid TEXT NOT NULL,
-  status TEXT DEFAULT 'pending', created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS notifications (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL,
-  title TEXT NOT NULL, body TEXT, read INTEGER DEFAULT 0, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-CREATE TABLE IF NOT EXISTS photos (
-  id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, letter_id INTEGER,
-  filename TEXT NOT NULL, filepath TEXT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);
-CREATE INDEX IF NOT EXISTS idx_letters_sender_recipient ON letters(sender_id, recipient_id);
-CREATE INDEX IF NOT EXISTS idx_pairings_status ON pairings(status);
-CREATE INDEX IF NOT EXISTS idx_letters_recipient ON letters(recipient_id, delivered_at);
-`;
+// Tables owned by the schema. `resetDB()` drops exactly these and lets the
+// migration runner rebuild them, so there is one definition of the schema
+// (server/lib/migrations/) rather than two that can drift.
+const SCHEMA_TABLES = ['users', 'pairs', 'letters', 'pairings', 'notifications', 'photos', '_migrations'];
+
+/**
+ * Opens the database file, or explains why it cannot.
+ *
+ * The previous version of this function caught any failure to open and DELETED
+ * the file before recreating it:
+ *
+ *     } catch (err) {
+ *       fs.rmSync(dbPath, { force: true });   // <- the entire correspondence
+ *       fs.rmSync(`${dbPath}-wal`, { force: true });
+ *       fs.rmSync(`${dbPath}-shm`, { force: true });
+ *       db = new Database(dbPath);
+ *     }
+ *
+ * Every reason to fail that code handles — a corrupt file, a directory that
+ * cannot be written — is a reason to RESTORE A BACKUP, not to start empty. The
+ * catch converted "your disk is full" into "your letters are gone and the app
+ * cheerfully came back up", and the health check said `ok: true` while it
+ * happened. So: no silent deletion. The only case we paper over is a zero-byte
+ * file, which cannot contain anything.
+ */
+function openDatabase(file) {
+  try {
+    return new Database(file);
+  } catch (err) {
+    let size = 0;
+    try {
+      size = fs.statSync(file).size;
+    } catch {
+      size = 0;
+    }
+    if (size === 0) {
+      // Nothing to lose: SQLite treats an empty file as a fresh database.
+      return new Database(file);
+    }
+    const hint =
+      'Refusing to start. The database file exists but could not be opened, and this ' +
+      'server will not delete it to work around that — a file that will not open is ' +
+      'usually a restore situation, not a delete situation. See docs/MIGRATION.md.';
+    const wrapped = new Error(`${hint}\n  file: ${file}\n  cause: ${err.message}`);
+    wrapped.cause = err;
+    wrapped.code = 'DB_OPEN_FAILED';
+    throw wrapped;
+  }
+}
 
 function initDB() {
   if (db) return db;
   if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
+
   // Legacy sql.js files are plain SQLite files, so better-sqlite3 opens them
-  // directly — opening the existing data/penpal.db IS the migration.
-  // If the file is corrupt, fall back to a fresh init.
-  try {
-    db = new Database(dbPath);
-  } catch (err) {
-    fs.rmSync(dbPath, { force: true });
-    fs.rmSync(`${dbPath}-wal`, { force: true });
-    fs.rmSync(`${dbPath}-shm`, { force: true });
-    db = new Database(dbPath);
-  }
+  // directly — opening the existing data/penpal.db IS most of the migration.
+  db = openDatabase(dbPath);
   db.pragma('journal_mode = WAL');
-  db.exec(SCHEMA);
+  // Wait rather than throw SQLITE_BUSY when another process (a backup script, a
+  // second worker, an admin psql session) holds the write lock. Without this a
+  // migration that arrives while cron is running takes the server down.
+  db.pragma('busy_timeout = 5000');
+  // Off by default in SQLite and cheap here: no foreign keys are declared
+  // anywhere in the schema, and turning it on would reject the deliberate
+  // dangling references that 020 preserves on purpose.
+  db.pragma('foreign_keys = OFF');
+
+  // Everything else — every table, every reshape, in order, once each — happens
+  // here. See server/lib/migrations/.
+  //
+  // The logger is passed explicitly because without it the runner falls back to
+  // a no-op and emits NOTHING: no "migration applied" line, no pre-migration
+  // snapshot record, and — worst — no warning about pairings that were dropped
+  // or accounts left pointing at a user that no longer exists. Those warnings
+  // are the only way an operator finds out a letter is about to go missing.
+  // docs/MIGRATION.md tells people to grep the logs for exactly this.
+  runMigrations(db, { logger });
+
+  // Return the handle. initDB() assigned `db` but returned undefined, so any
+  // caller that reached a repository through a DIFFERENT module instance — a
+  // route module importing db.js itself rather than going through index.js —
+  // got undefined back and blew up at the first `.prepare(...)`. It presented
+  // as "Cannot read properties of undefined (reading 'exec')" inside whichever
+  // migration happened to touch the handle first.
   return db;
 }
 
@@ -68,9 +102,19 @@ function getDb() {
   return db;
 }
 
+/**
+ * Drops every table and replays the migrations from empty.
+ *
+ * Development affordance only. `/api/admin/reset-db` refuses to run in
+ * production. This is a destructive operation and nothing here is trying to be
+ * clever about that.
+ */
 function resetDB() {
-  getDb().exec('DROP TABLE IF EXISTS users; DROP TABLE IF EXISTS pairs; DROP TABLE IF EXISTS letters; DROP TABLE IF EXISTS pairings; DROP TABLE IF EXISTS notifications; DROP TABLE IF EXISTS photos;');
-  getDb().exec(SCHEMA);
+  const handle = getDb();
+  for (const table of SCHEMA_TABLES) {
+    handle.exec(`DROP TABLE IF EXISTS "${table}"`);
+  }
+  runMigrations(handle, { logger });
 }
 
 function closeDB() {
@@ -84,4 +128,24 @@ function closeDB() {
   }
 }
 
-module.exports = { initDB, getDb, resetDB, closeDB };
+/** Absolute path of the database file. Health checks and ops routes need it. */
+function getDbPath() {
+  return dbPath;
+}
+
+function getDataDir() {
+  return dataDir;
+}
+
+module.exports = {
+  initDB,
+  getDb,
+  resetDB,
+  closeDB,
+  getDbPath,
+  getDataDir,
+  // Re-exported so `scripts/migrate.js` and the ops routes can share one import.
+  runMigrations,
+  migrationStatus,
+  listMigrations,
+};

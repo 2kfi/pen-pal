@@ -6,7 +6,8 @@
  * is a normal event rather than a sign-out.
  */
 
-import { getAccessToken, useAuth } from '../stores/auth';
+import { getAccessToken, refreshSession } from './session';
+import { useAuth } from '../stores/auth';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -29,33 +30,6 @@ async function readError(res: Response): Promise<string> {
   return res.statusText || `Request failed (${res.status})`;
 }
 
-/** In-flight refresh, so N parallel 401s trigger ONE refresh, not N. */
-let refreshInFlight: Promise<boolean> | null = null;
-
-async function refreshOnce(): Promise<boolean> {
-  if (!refreshInFlight) {
-    refreshInFlight = (async () => {
-      try {
-        const res = await fetch('/api/auth/refresh', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'X-Requested-With': 'penpal' },
-        });
-        return res.ok;
-      } catch {
-        return false;
-      } finally {
-        // Cleared on the next tick so callers awaiting this promise all see the
-        // same result before a new refresh can start.
-        setTimeout(() => {
-          refreshInFlight = null;
-        }, 0);
-      }
-    })();
-  }
-  return refreshInFlight;
-}
-
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
   const isForm = init.body instanceof FormData;
 
@@ -75,9 +49,11 @@ export async function api<T = unknown>(path: string, init: RequestInit = {}): Pr
   let res = await send();
 
   // One silent refresh, one retry. Never loop: a server that 401s forever must
-  // not turn into a request storm.
+  // not turn into a request storm. The refresh itself is deduplicated in
+  // lib/session, so N parallel 401s — or a 401 racing the boot refresh — cost
+  // one rotation rather than N.
   if (res.status === 401 && !path.includes('/auth/refresh')) {
-    const ok = await refreshOnce();
+    const ok = await refreshSession();
     if (ok) {
       res = await send();
     } else {

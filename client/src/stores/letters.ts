@@ -14,7 +14,8 @@
  */
 
 import { create } from 'zustand';
-import { getAccessToken, useAuth } from './auth';
+import { useAuth } from './auth';
+import { getAccessToken } from '../lib/session';
 import {
   SyncClient,
   SyncController,

@@ -1,0 +1,395 @@
+/**
+ * Rituals (plan step 27).
+ *
+ * Everything here is `rit-` prefixed and every value is a token from tokens.css.
+ * No raw colour, no new radius, no invented spacing.
+ *
+ * One idea, spent once: the day's puzzle is a **dispatch slip** — a torn-off
+ * stub carrying the date, a hairline tear edge, and nothing else. It is the only
+ * boxed thing on the page. The streak calendar and the anniversary sit directly
+ * on the paper with a hairline between them, in the archive's spine language,
+ * because a ritual that is a row of three identical rounded cards is not a
+ * ritual, it is a dashboard.
+ */
+
+.rituals {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.rituals h1 {
+  margin-bottom: 0;
+}
+
+/* The one sentence that says what this page is. Plain, and it does the work of
+ * the three paragraphs a feature page usually carries. */
+.rituals-lede {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--type-base);
+  color: var(--muted);
+}
+
+.rit-section + .rit-section {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+.rit-section > h2 {
+  margin-top: 0;
+}
+
+.rit-section-note {
+  margin: 0 0 var(--space-3);
+  max-width: var(--measure);
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+.rit-note-after {
+  margin-top: var(--space-3);
+  margin-bottom: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * the dispatch slip — the only object on this page                    *
+ * ------------------------------------------------------------------ */
+
+.rit-slip {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* The tear-off stub. It carries the date — real data, which is the only reason
+ * postmark type is allowed to be uppercase in this system. */
+.rit-stub {
+  display: flex;
+  align-items: center;
+  min-width: 2.25rem;
+  padding: var(--space-4) 0;
+  border-right: 1px dashed var(--rule-strong);
+  background: var(--paper-2);
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.rit-slip-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+@media (min-width: 640px) {
+  .rit-slip-body {
+    padding: var(--space-5);
+  }
+}
+
+/* The question is the subject of this page: it is set at the letter size, in the
+ * reading serif, at the measure cap. Nothing on this page is set larger. */
+.rit-question {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+}
+
+.rit-question-note {
+  margin: 0;
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+/* `flex-end` aligns the row's bottom edges, which is right when both items are
+   the same height and wrong the moment one of them is taller. A `.field` is
+   label + input + hint, so with a hint underneath it the button sits a whole
+   line below the input it belongs beside.
+
+   `flex-start` plus a spacer equal to the label's line box puts the button on
+   the input's line whether or not the field has a hint and whether or not it
+   has grown an error. The spacer is computed from the label's own type size and
+   the shared leading, so it cannot drift from the label it is imitating. */
+.rit-answer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.rit-answer-row .field {
+  margin-bottom: 0;
+}
+
+.rit-answer-row > button,
+.rit-answer-row > .button {
+  margin-top: calc(var(--type-xs) * var(--leading-reading) + var(--space-1));
+}
+
+/* Same rule for the dated form; the class is kept so the two can be told apart
+   if one of them ever needs to diverge. */
+.rit-answer-row > .rit-date-button {
+  margin-top: calc(var(--type-xs) * var(--leading-reading) + var(--space-1));
+}
+
+/* A number, not a sentence: a narrow box, mono digits, centred. */
+.rit-answer-row input {
+  width: 7.5rem;
+  font-family: var(--font-postmark);
+  font-size: var(--type-md);
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ *
+ * the reveal — both answers, at once, or neither                      *
+ * ------------------------------------------------------------------ */
+
+.rit-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+  /* The only motion on this page. It answers the second submission and nothing
+     else: there is no entrance animation on load, and none on scroll. */
+  animation: rit-settle var(--duration-base) var(--ease) both;
+}
+
+@keyframes rit-settle {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.rit-answers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+@media (max-width: 430px) {
+  .rit-answers {
+    grid-template-columns: 1fr;
+    gap: var(--space-3);
+  }
+}
+
+.rit-answer-col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: var(--space-2);
+  border-top: 2px solid var(--rule-strong);
+}
+
+/* Two numbers, in the display face at size. The one memorable thing on the page
+   is still the wax on the button; these are just the answer, set large because
+   they are the answer. */
+.rit-answer-value {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-xl);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rit-answer-whose {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.rit-verdict {
+  margin: 0;
+  font-size: var(--type-md);
+}
+
+/* ------------------------------------------------------------------ *
+ * the calendar of days that carried letters                            *
+ * ------------------------------------------------------------------ */
+
+/* The weekday header and the grid share one `grid-template-columns`, and the
+   header is its own row of the SAME grid rather than a separate strip. An empty
+   `<span>` in the first cell is the corner. Two separate elements could never
+   stay aligned, because the gap between a header row and the grid is not the
+   gap inside the grid, and 3px of drift over seven columns reads as the grid
+   being crooked. */
+
+
+/* `1fr` is `minmax(auto, 1fr)`, so a track is never allowed to be narrower
+   than its content — and the content of the header row is seven letters, which
+   is wider than a 7-column track at 375px. That is what pushed Sunday onto a row
+   of its own and made the calendar look like it had eight columns.
+
+   `minmax(0, 1fr)` is the fix: the track can now shrink to whatever is left
+   after the gaps, and the header's own `nowrap` keeps each letter on one line.
+   Same bug class as chess.css's `.cb-board`, which already uses minmax(0, 1fr)
+   for exactly this reason. */
+.rit-cal {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+  /* Four weeks, ending today. Cells are ~46px at 375px, so the day number and
+     the stamp both have room and nothing scrolls sideways. */
+  margin-bottom: var(--space-3);
+}
+
+.rit-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.75rem;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  /* Load-bearing twice over: it stops the label wrapping inside its own cell,
+     and with minmax(0, 1fr) above, it is the only thing preventing the header
+     from setting the track widths. */
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.rit-cell {
+  position: relative;
+  aspect-ratio: 1;
+  min-height: var(--target-min);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+}
+
+.rit-cell.is-blank {
+  background: none;
+  border-color: transparent;
+}
+
+.rit-cell-day {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A day that carried a letter gets an ink bar across the bottom of its cell.
+   Presence of a mark, not a colour, carries the state — the same cell also
+   carries its date, and the count below the grid says how many there are. */
+.rit-cell-mark {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
+  height: 3px;
+  background: var(--text);
+}
+
+.rit-facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.rit-fact {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: baseline;
+  font-size: var(--type-sm);
+}
+
+.rit-fact-term {
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  min-width: 7.5rem;
+}
+
+.rit-milestone {
+  margin: var(--space-3) 0 0;
+  font-size: var(--type-md);
+}
+
+/* ------------------------------------------------------------------ *
+ * together — one number, counted in the open                          *
+ * ------------------------------------------------------------------ */
+
+.rit-count {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
+}
+
+.rit-count-value {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--type-2xl);
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rit-count-unit {
+  font-size: var(--type-md);
+  color: var(--muted);
+}
+
+.rit-when {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+/* ------------------------------------------------------------------ *
+ * absences                                                             *
+ * ------------------------------------------------------------------ */
+
+/* An empty ritual is an invitation, not an apology. No illustration, no
+   illustration-shaped box, no "no data available". */
+.rit-empty {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--rule);
+}
+
+.rit-empty p {
+  margin: 0 0 var(--space-2);
+  max-width: var(--measure);
+}
+
+.rit-waiting {
+  margin: 0;
+  font-size: var(--type-sm);
+  color: var(--muted);
+}
+
+/* Nothing on this page is decorative motion, so nothing survives
+   prefers-reduced-motion: the reveal changes state in one frame. */
+@media (prefers-reduced-motion: reduce) {
+  .rit-reveal {
+    animation: none;
+  }
+}

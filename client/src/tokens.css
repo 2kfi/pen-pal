@@ -21,7 +21,12 @@
      anything interactive and clears WCAG 2.2 SC 1.4.11 (3:1 non-text contrast).
      Using one token for both means either loud dividers or invisible controls. */
   --rule: #363c47;
-  --rule-strong: #5a6474;
+  /* 3.25:1 on --paper-2, the lightest dark surface and therefore the worst
+     case. The old #5a6474 measured 2.76:1 there and FAILED SC 1.4.11 — which
+     is every input border in the dark theme, not a decorative hairline. The
+     gate checked this token only against --ink and --paper, both darker, so
+     the failure was invisible to it. --paper-2 is now checked too. */
+  --rule-strong: #666f7e;
 
   --wax: #e8a020;
   --wax-bright: #f5c048;
@@ -29,7 +34,10 @@
   --danger: #e0524d;
 
   --text: #e8e4dc;
-  --muted: #8b8578;
+  /* 4.88:1 on --paper-2. The old #8b8578 measured 4.4997:1 there — a FAIL that
+     *displayed* as "4.50" and so looked like a pass. Secondary text on raised
+     surfaces is exactly where this token gets used. */
+  --muted: #918b7f;
 
   --wax-wash: rgba(232, 160, 32, 0.09);
   --transit-wash: rgba(46, 196, 182, 0.09);

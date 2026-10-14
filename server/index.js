@@ -143,10 +143,14 @@ const { authenticateToken, checkStr, generatePID, DUMMY_HASH } = require('./lib/
 const authRoutes = require('./routes/auth');
 const letterRoutes = require('./routes/letters');
 const opsRoutes = require('./routes/ops');
+const gameRoutes = require('./routes/games');
+const ritualRoutes = require('./routes/rituals');
 
 app.use('/api', authRoutes());
 app.use('/api/letters', letterRoutes());
 app.use(opsRoutes());
+app.use('/api/games', gameRoutes());
+app.use('/api/rituals', ritualRoutes());
 
 app.get('/api/me', authenticateToken, (req, res) => {
   const user = getDb().prepare('SELECT id, username, friendly_name, email, pid, public_key as publicKey, encrypted_private_key as encryptedPrivateKey, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?').get(req.user.id);

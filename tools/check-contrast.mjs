@@ -53,6 +53,16 @@ const PAIRS = [
   ['rule-strong', 'paper', 3.0, 'interactive border on a card'],
   ['rule-strong', 'ink', 3.0, 'interactive border on the page'],
   ['focus-ring', 'ink', 3.0, 'focus indicator'],
+
+  // --paper-2 is the *lightest* surface in the dark theme, so it is the worst
+  // case for any foreground, and the pair above all pass on it by less than
+  // they pass elsewhere. Checking only --ink and --paper hid two real failures:
+  // --muted at 4.4997:1 and --rule-strong at 2.76:1, both live, both on every
+  // dark-theme input border.
+  ['muted', 'paper-2', 4.5, 'postmark metadata on a raised surface'],
+  ['rule-strong', 'paper-2', 3.0, 'interactive border on a raised surface'],
+  ['text', 'paper-2', 4.5, 'body text on a raised surface'],
+  ['wax', 'paper-2', 4.5, 'accent link on a raised surface'],
 ];
 
 let failures = 0;

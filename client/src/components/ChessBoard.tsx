@@ -201,7 +201,44 @@ interface DragState {
   over: number | null;
 }
 
-export function ChessBoard() {
+export interface ChessBoardProps {
+  /**
+   * Restrict play to one side. Omit it for two players on one board. When set,
+   * the board goes inert on the opponent's turn — the squares still render, the
+   * move list still updates, and nothing is disabled in the accessibility tree,
+   * because "not your move yet" is a state, not a disabled control.
+   */
+  humanColor?: Color;
+  /**
+   * Called once the move is on the board. Play uses it to hand the resulting
+   * position to the search, which is why it receives the state rather than
+   * having to reconstruct it.
+   */
+  onMove?: (move: Move, state: GameState) => void;
+  /**
+   * Replaces the board's own status line. Play sets this while the engine is
+   * thinking so the announcement is made here rather than by a second element
+   * that would read as a duplicate.
+   */
+  status?: string;
+  /**
+   * A move to play on the opponent's behalf, injected from outside — how the
+   * search gets its reply onto the board without this component owning the
+   * engine.
+   *
+   * The sequence number, not the move, is the trigger. The engine can return
+   * the identical move twice in a game, and comparing moves would silently drop
+   * the second one.
+   */
+  engineMove?: { move: Move; seq: number } | null;
+}
+
+export function ChessBoard({
+  humanColor,
+  onMove,
+  status: statusOverride,
+  engineMove,
+}: ChessBoardProps = {}) {
   const [game, setGame] = useState<GameState>(initialState);
   const [played, setPlayed] = useState<Move[]>([]);
   const [selected, setSelected] = useState<number | null>(null);
@@ -253,7 +290,7 @@ export function ChessBoard() {
   }, [timeline]);
 
   const verdict = verdictOf(result, game.turn);
-  const live = result === 'playing' && promo === null;
+  const live = result === 'playing' && promo === null && (humanColor === undefined || game.turn === humanColor);
 
   const focusSquare = (sq: number) => {
     frameRef.current?.querySelector<HTMLElement>(`[data-sq="${sq}"]`)?.focus();
@@ -261,6 +298,7 @@ export function ChessBoard() {
 
   const commit = (move: Move) => {
     const san = toSAN(game, move);
+    const mover = game.turn;
     const next = cloneState(game);
     const stack: Stack = [];
     makeMove(next, move, stack);
@@ -286,6 +324,12 @@ export function ChessBoard() {
       `${san}. ${checking ? `Check — ${side(next.turn)} must answer.` : `${side(next.turn)} to move.`}`,
     );
     tick(checking ? 'check' : move.captured || move.enPassant ? 'capture' : 'move');
+
+    // After the board has settled, not before: the caller drives a search from
+    // the resulting position, and it must be the position a reader can see.
+    // Gated on the mover so an injected engine move does not immediately ask
+    // the engine to reply to itself.
+    if (res === 'playing' && (humanColor === undefined || mover === humanColor)) onMove?.(move, next);
   };
 
   /**
@@ -513,6 +557,29 @@ export function ChessBoard() {
 
   const draggedPiece = ghost ? game.board[ghost.from] : null;
 
+  /**
+   * Play an injected move. Recomputed against `legal` rather than trusted: the
+   * search and the board could disagree if a move was taken back between the
+   * two, and playing an illegal move would corrupt the position.
+   */
+  const lastSeq = useRef(0);
+  useEffect(() => {
+    if (!engineMove || engineMove.seq === lastSeq.current) return;
+    lastSeq.current = engineMove.seq;
+
+    const wanted = engineMove.move;
+    const options = legal.filter(
+      (m) => m.from === wanted.from && m.to === wanted.to && (m.promotion ?? null) === (wanted.promotion ?? null),
+    );
+    if (options.length === 0) {
+      setStatus('The engine offered a move that is not legal in this position. Nothing was played.');
+      return;
+    }
+    commit(options[0]);
+    // `commit` and `legal` change identity every render; the sequence guard
+    // above is what makes re-running this a no-op rather than a second move.
+  }, [engineMove, legal, commit]);
+
   return (
     <div className="cb">
       <div className="cb-frame" ref={frameRef}>
@@ -601,7 +668,7 @@ export function ChessBoard() {
           {checkNow && verdict.tone === 'live' && (
             <span className="cb-flag cb-flag--check" aria-hidden>!</span>
           )}
-          {status}
+          {statusOverride ?? status}
         </p>
       </div>
 
