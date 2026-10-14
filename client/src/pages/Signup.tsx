@@ -20,7 +20,7 @@ interface SignupResponse {
  */
 export default function Signup() {
   const nav = useNavigate();
-  const login = useAuth((s) => s.login);
+  const signIn = useAuth((s) => s.signIn);
   const unlock = useVault((s) => s.unlock);
 
   const [username, setUsername] = useState('');
@@ -67,7 +67,7 @@ export default function Signup() {
         }),
       });
 
-      login(res.token, res.user);
+      signIn(res.token, res.user);
 
       // Unlock straight away so the user lands in the app already able to read mail.
       // A failed unlock is recoverable — the wrapped key is still on the server.

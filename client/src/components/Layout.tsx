@@ -3,9 +3,7 @@ import { useAuth } from '../stores/auth';
 import { useTheme } from '../stores/theme';
 import { useVault } from '../lib/vault';
 import { activeKey } from '../lib/vault';
-import { isSignedIn } from '../stores/auth';
 import Unlock from '../pages/Unlock';
-import { useEffect } from 'react';
 
 /**
  * App shell.
@@ -14,19 +12,14 @@ import { useEffect } from 'react';
  * <main>. This adds proper landmark roles, a skip link, and the vault gate.
  */
 export default function Layout() {
-  const logout = useAuth((s) => s.logout);
+  const signOut = useAuth((s) => s.signOut);
   const { theme, toggle } = useTheme();
   const status = useVault((s) => s.status);
   const nav = useNavigate();
 
-  // Reconcile the persisted token with a live session on load. A stale token in
-  // localStorage should land you on the sign-in screen, not a broken archive.
-  useEffect(() => {
-    if (!isSignedIn()) nav('/login', { replace: true });
-  }, [nav]);
-
   const onLogout = () => {
-    logout();
+    void fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
+    signOut();
     nav('/login', { replace: true });
   };
 

@@ -11,10 +11,13 @@ config.conf
 *.env
 
 # Database (keep folder but ignore contents)
-data/*.db
-data/*.db-journal
-data/*.db-shm
-data/*.db-wal
+data/
+backups/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.pre-restore-*
 
 # User Uploads
 uploads/*

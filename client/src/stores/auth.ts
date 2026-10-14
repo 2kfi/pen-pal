@@ -1,8 +1,21 @@
 /**
  * Session state.
  *
- * What is persisted: the JWT and the *public* profile only.
- * What is never persisted: the private key (see lib/vault.ts).
+ * What is held where:
+ *   - access token  -> a module-scoped variable. MEMORY ONLY. Never written to
+ *                      localStorage, sessionStorage, IndexedDB or any cookie. An
+ *                      XSS can read a variable; it cannot exfiltrate storage it
+ *                      never wrote.
+ *   - refresh token -> an httpOnly cookie the JavaScript cannot read at all.
+ *   - public profile-> localStorage. Not sensitive, and it avoids a round-trip
+ *                      on first paint.
+ *
+ * A full page reload therefore loses the access token by design. That is not a
+ * bug: the client silently refreshes from the cookie on boot, so the user sees
+ * no difference and the token still never rests in storage.
+ *
+ * v0.0.2 kept the access token in localStorage, where any XSS could take it and
+ * replay it for the full 7 days.
  */
 
 import { create } from 'zustand';
@@ -17,65 +30,121 @@ export interface UserProfile {
   bio: string | null;
   avatar_url: string | null;
   publicKey: string | null;
-  /** Server-side AES-GCM wrapper around the private key. Unusable without the password. */
   encryptedPrivateKey: string | null;
 }
 
 interface AuthState {
-  token: string | null;
+  /** True once a refresh has confirmed there is a live session. */
+  authenticated: boolean;
+  /** True during the initial silent-refresh, so the UI can show a splash. */
+  restoring: boolean;
   user: UserProfile | null;
-  login: (token: string, user: UserProfile) => void;
-  logout: () => void;
+  signIn: (token: string, user: UserProfile) => void;
+  signOut: () => void;
+  /** Called once at boot: trades the httpOnly cookie for a fresh access token. */
+  restore: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
 }
 
-const TOKEN_KEY = 'pp_token';
-const USER_KEY = 'pp_user';
+const PROFILE_KEY = 'pp_profile';
 
-function readStoredUser(): UserProfile | null {
+/**
+ * Storage access guarded. Reading localStorage at module scope throws in Node,
+ * which took down any test file that merely imported this module; it also throws
+ * in Safari private mode when cookies are blocked.
+ */
+function storage(): Storage | null {
   try {
-    const raw = localStorage.getItem(USER_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    // v0.0.2 did a bare JSON.parse at module scope with no guard, so a corrupted
-    // localStorage entry hard-crashed the bundle before React ever mounted.
-    if (typeof parsed === 'object' && parsed !== null && 'id' in parsed) return parsed as UserProfile;
-    return null;
+    if (typeof localStorage === 'undefined') return null;
+    // Touch it: Safari private mode throws on access, not on the typeof check.
+    localStorage.getItem(PROFILE_KEY);
+    return localStorage;
   } catch {
-    localStorage.removeItem(USER_KEY);
     return null;
   }
 }
 
-export const useAuth = create<AuthState>((set) => ({
-  token: localStorage.getItem(TOKEN_KEY),
-  user: readStoredUser(),
+function readStoredProfile(): UserProfile | null {
+  const store = storage();
+  if (!store) return null;
+  try {
+    const raw = store.getItem(PROFILE_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed === 'object' && parsed !== null && 'id' in parsed) return parsed as UserProfile;
+    return null;
+  } catch {
+    store.removeItem(PROFILE_KEY);
+    return null;
+  }
+}
 
-  login: (token, user) => {
-    localStorage.setItem(TOKEN_KEY, token);
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
-    set({ token, user });
+/**
+ * The access token lives here and nowhere else. A closure rather than React
+ * state so there is exactly one copy to audit.
+ */
+let accessToken: string | null = null;
+
+export function getAccessToken(): string | null {
+  return accessToken;
+}
+
+function setAccessToken(token: string | null): void {
+  accessToken = token;
+}
+
+export const useAuth = create<AuthState>((set) => ({
+  authenticated: false,
+  restoring: true,
+  user: readStoredProfile(),
+
+  signIn: (token, user) => {
+    setAccessToken(token);
+    storage()?.setItem(PROFILE_KEY, JSON.stringify(user));
+    set({ authenticated: true, restoring: false, user });
   },
 
-  logout: () => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
-    // Dropping the token without dropping the key would leave a decrypted private
-    // key resident after logout.
+  signOut: () => {
+    setAccessToken(null);
+    storage()?.removeItem(PROFILE_KEY);
+    // Dropping the token without dropping the key would leave a decrypted
+    // private key resident after sign-out.
     useVault.getState().lock();
-    set({ token: null, user: null });
+    set({ authenticated: false, restoring: false, user: null });
+  },
+
+  /**
+   * Exchange the httpOnly refresh cookie for a fresh access token.
+   * Returns false when there is no live session, which is the normal
+   * signed-out path — not an error.
+   */
+  restore: async () => {
+    try {
+      const res = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'penpal' },
+      });
+      if (!res.ok) {
+        setAccessToken(null);
+        set({ authenticated: false, restoring: false });
+        return false;
+      }
+      const data = (await res.json()) as { token: string };
+      setAccessToken(data.token);
+      set({ authenticated: true, restoring: false });
+      return true;
+    } catch {
+      setAccessToken(null);
+      set({ authenticated: false, restoring: false });
+      return false;
+    }
   },
 
   refreshProfile: async () => {
     const { api } = await import('../lib/api');
     const user = await api<UserProfile>('/api/me');
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    storage()?.setItem(PROFILE_KEY, JSON.stringify(user));
     set({ user });
   },
 }));
-
-/** True once both a token and a usable profile are present. */
-export function isSignedIn(): boolean {
-  const { token, user } = useAuth.getState();
-  return Boolean(token && user?.id);
-}

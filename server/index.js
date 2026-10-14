@@ -61,6 +61,13 @@ const corsOrigin = process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',') 
 app.use(cors({ origin: corsOrigin }));
 app.use(express.json({ limit: '1mb' }));
 
+// Request IDs and crash handlers. Mounted before every route so a request id
+// exists for anything logged afterwards, including 404s.
+const { requestContext, errorHandler } = require('./lib/ops/request-context');
+const { installProcessHandlers } = require('./lib/ops/logger');
+installProcessHandlers();
+app.use(requestContext());
+
 // NOTE: v0.0.2 mounted `express.static('public')` here, which meant `/` served the
 // legacy vanilla app while `/letters` served the React app — two apps, two auth
 // flows, one origin. The legacy client is archived in git history and is no longer
@@ -102,8 +109,6 @@ const LOGIN_MAX = Number(process.env.LOGIN_RATE_MAX || 60);
 const WRITE_MAX = Number(process.env.WRITE_RATE_MAX || 300);
 
 const common = { windowMs: AUTH_WINDOW_MS, standardHeaders: true, legacyHeaders: false };
-app.post('/api/login', rateLimit({ ...common, limit: LOGIN_MAX }));
-app.post('/api/signup', rateLimit({ ...common, limit: SIGNUP_MAX }));
 
 /**
  * Keyed on the authenticated user id where there is one, so an entire household
@@ -126,74 +131,22 @@ initDB();
 
 const { authenticateToken, checkStr, generatePID, DUMMY_HASH } = require('./lib/auth');
 
-app.get('/healthz', (req, res) => res.status(200).json({ ok: true }));
+// ---------------------------------------------------------------------------
+// Route modules. Mounted here rather than inline so each concern owns its file
+// and can be tested in isolation.
+//
+// Order matters in two places:
+//   - routers go BEFORE the SPA fallback, or client routes 404 into index.html
+//   - the letters router must be mounted before anything else claims
+//     /api/letters, because Express takes the first match
+// ---------------------------------------------------------------------------
+const authRoutes = require('./routes/auth');
+const letterRoutes = require('./routes/letters');
+const opsRoutes = require('./routes/ops');
 
-app.post('/api/signup', async (req, res) => {
-  const { username, email, password, publicKey, encryptedPrivateKey, profileData } = req.body || {};
-  const bad =
-    checkStr(username, { required: true, min: 1, max: 64 }) ||
-    checkStr(email, { required: true, min: 3, max: 254 }) ||
-    checkStr(password, { required: true, min: 8, max: 256 });
-  if (bad || !email.includes('@')) return res.status(400).json({ error: `Invalid signup body: ${bad || 'email must contain @'}` });
-  try {
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const pid = generatePID();
-    const friendlyName = profileData?.friendlyName || username;
-    const bio = profileData?.bio || '';
-
-    const info = getDb().prepare(`INSERT INTO users (username, email, password_hash, public_key, encrypted_private_key, pid, friendly_name, bio, profile_data)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(username, email, hashedPassword, publicKey || '', encryptedPrivateKey || '', pid, friendlyName, bio, JSON.stringify(profileData || {}));
-
-    const token = jwt.sign({ id: info.lastInsertRowid, username, pid }, SECRET, { expiresIn: '7d' });
-    res.json({ token, user: { id: info.lastInsertRowid, username, email, pid, friendly_name: friendlyName, publicKey, encryptedPrivateKey } });
-  } catch (err) {
-    log('Signup error', { error: err.message });
-    res.status(400).json({ error: 'Username or email already exists' });
-  }
-});
-
-app.post('/api/login', async (req, res) => {
-  const { email, password } = req.body || {};
-  const bad = checkStr(email, { required: true, min: 3, max: 254 }) || checkStr(password, { required: true, min: 1, max: 256 });
-  if (bad) return res.status(400).json({ error: `Invalid login body: ${bad}` });
-  try {
-    const user = getDb().prepare('SELECT * FROM users WHERE email = ?').get(email);
-    // Identical response for "no such user" and "wrong password". v0.0.2 returned
-    // "User not found" vs "Invalid password" — a free account-enumeration oracle
-    // for anyone holding a list of email addresses.
-    if (!user) {
-      // Burn comparable time so the response does not leak existence either.
-      await bcrypt.compare(password, DUMMY_HASH);
-      return res.status(401).json({ error: 'Email or password is incorrect' });
-    }
-
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-    if (!validPassword) return res.status(401).json({ error: 'Email or password is incorrect' });
-
-    const token = jwt.sign({ id: user.id, username: user.username, pid: user.pid }, SECRET, { expiresIn: '7d' });
-    res.json({
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        friendly_name: user.friendly_name,
-        email: user.email,
-        pid: user.pid,
-        publicKey: user.public_key,
-        encryptedPrivateKey: user.encrypted_private_key,
-        age: user.age,
-        birthday: user.birthday,
-        favorite_food: user.favorite_food,
-        bio: user.bio,
-        avatar_url: user.avatar_url
-      }
-    });
-  } catch (err) {
-    log('Login error', { error: err.message });
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
+app.use('/api', authRoutes());
+app.use('/api/letters', letterRoutes());
+app.use(opsRoutes());
 
 app.get('/api/me', authenticateToken, (req, res) => {
   const user = getDb().prepare('SELECT id, username, friendly_name, email, pid, public_key as publicKey, encrypted_private_key as encryptedPrivateKey, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?').get(req.user.id);
@@ -335,25 +288,6 @@ app.delete('/api/pairs/unpair', authenticateToken, (req, res) => {
   }
 });
 
-app.post('/api/letters/send', authenticateToken, perUser(WRITE_MAX), (req, res) => {
-  const { recipientId, encryptedContent, encryptedMetadata, deliveredAt } = req.body || {};
-  if (!Number.isInteger(recipientId)) return res.status(400).json({ error: 'recipientId must be an integer' });
-  const bad = checkStr(encryptedContent, { required: true, min: 1, max: 1000000 });
-  if (bad) return res.status(400).json({ error: `Invalid letter body: ${bad}` });
-  try {
-    const db = getDb();
-    if (!isPaired(db, req.user.id, recipientId)) return res.status(403).json({ error: 'Not paired with recipient' });
-
-    db.prepare('INSERT INTO letters (sender_id, recipient_id, encrypted_content, encrypted_metadata, delivered_at) VALUES (?, ?, ?, ?, ?)')
-      .run(req.user.id, recipientId, encryptedContent, encryptedMetadata ?? null, deliveredAt ?? null);
-    db.prepare('INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)')
-      .run(recipientId, 'letter_received', 'New Letter', `You received a new letter from ${req.user.username}!`);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not send letter' });
-  }
-});
-
 function pageParams(req) {
   const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
   const cursor = req.query.cursor !== undefined ? parseInt(req.query.cursor, 10) : null;
@@ -368,26 +302,6 @@ function pageParams(req) {
  * it arrives. v0.0.2 stored `delivered_at` and never filtered on it, so the
  * "Deliver no earlier than" date was decorative — scheduled mail arrived at once.
  */
-app.get('/api/letters/sync', authenticateToken, (req, res) => {
-  const { limit, cursor } = pageParams(req);
-  const db = getDb();
-  const now = new Date().toISOString();
-
-  const base = `
-    SELECT * FROM letters
-    WHERE (
-      sender_id = ?
-      OR (recipient_id = ? AND (delivered_at IS NULL OR delivered_at <= ?))
-    )`;
-
-  const letters =
-    cursor === null
-      ? db.prepare(`${base} ORDER BY id ASC LIMIT ?`).all(req.user.id, req.user.id, now, limit)
-      : db.prepare(`${base} AND id > ? ORDER BY id ASC LIMIT ?`).all(req.user.id, req.user.id, now, cursor, limit);
-
-  res.json(letters);
-});
-
 // Everything about this route is delegated to the pipeline in server/uploads.js.
 // The response shape is unchanged (`id`, `url`) plus `thumbUrl`, so the existing
 // client keeps working.
@@ -486,6 +400,11 @@ app.use((err, req, res, next) => {
   next();
 });
 
+// The terminal error handler MUST come last: after every route AND after the
+// SPA fallback, or a thrown error in a route falls through to index.html and
+// comes back to the client as a 200 full of HTML.
+app.use(errorHandler());
+
 let server;
 function startServer() {
   log('Database initialized', { wal: true });
@@ -497,11 +416,26 @@ function startServer() {
 
 function shutdown(signal) {
   log('Shutting down', { signal });
+
+  // Close SSE streams BEFORE closing the DB. Each stream owns a sweep interval
+  // and a live socket; leaving them up means process.exit() is the only thing
+  // that can end them, and in tests that hangs the runner rather than failing it.
+  const bus = letterRoutes.createBus?.();
+  if (bus) {
+    try {
+      letterRoutes.closeAllStreams?.();
+    } catch (err) {
+      log('error closing letter streams', { error: err.message });
+    }
+  }
+
   if (server) {
     server.close(() => {
       closeDB();
       process.exit(0);
     });
+    // Backstop: server.close() waits for open sockets, and an SSE connection
+    // never goes idle on its own.
     setTimeout(() => process.exit(0), 5000).unref();
   } else {
     closeDB();

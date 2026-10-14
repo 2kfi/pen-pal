@@ -1,4 +1,4 @@
-import { Suspense, lazy, type JSX } from 'react';
+import { Suspense, lazy, useEffect, type JSX } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
 import { useAuth } from './stores/auth';
@@ -12,72 +12,104 @@ const Pairing = lazy(() => import('./pages/Pairing'));
 const Play = lazy(() => import('./pages/Play'));
 const Settings = lazy(() => import('./pages/Settings'));
 
-function Loading() {
-  return (
-    <main id="main">
-      <p className="muted">Opening the archive…</p>
-    </main>
-  );
+/**
+ * The access token lives in memory only (see stores/auth), so a page load has
+ * nothing to restore from storage. We exchange the httpOnly refresh cookie for
+ * a token before rendering anything that needs it. That is why there is a
+ * `restoring` state and why the app does not flash the sign-in screen on reload.
+ */
+function Boot({ children }: { children: JSX.Element }) {
+  const restoring = useAuth((s) => s.restoring);
+
+  useEffect(() => {
+    void useAuth.getState().restore();
+  }, []);
+
+  if (restoring) {
+    return (
+      <main id="main">
+        <p className="muted">Opening your archive…</p>
+      </main>
+    );
+  }
+  return children;
 }
 
-/**
- * Checks for a token only — not for an unlocked key. Key residency is enforced
- * inside <Layout>, because "signed in" and "able to read" are different states and
- * conflating them hides the difference from the user.
- */
 function RequireAuth({ children }: { children: JSX.Element }) {
-  const token = useAuth((s) => s.token);
-  if (!token) return <Navigate to="/login" replace />;
+  const authenticated = useAuth((s) => s.authenticated);
+  if (!authenticated) return <Navigate to="/login" replace />;
   return children;
 }
 
 /** Keeps signed-in users off the auth screens. */
 function RedirectIfAuthed({ children }: { children: JSX.Element }) {
-  const token = useAuth((s) => s.token);
-  if (token) return <Navigate to="/letters" replace />;
+  const authenticated = useAuth((s) => s.authenticated);
+  if (authenticated) return <Navigate to="/letters" replace />;
   return children;
+}
+
+function NotFound() {
+  return (
+    <main id="main">
+      <div className="card">
+        <h1>Nothing here</h1>
+        <p className="muted">That page does not exist.</p>
+        <a className="button" href="/letters">
+          Back to your archive
+        </a>
+      </div>
+    </main>
+  );
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <Suspense fallback={<Loading />}>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              <RedirectIfAuthed>
-                <Login />
-              </RedirectIfAuthed>
-            }
-          />
-          <Route
-            path="/signup"
-            element={
-              <RedirectIfAuthed>
-                <Signup />
-              </RedirectIfAuthed>
-            }
-          />
+      <Suspense
+        fallback={
+          <main id="main">
+            <p className="muted">Loading…</p>
+          </main>
+        }
+      >
+        <Boot>
+          <Routes>
+            <Route
+              path="/login"
+              element={
+                <RedirectIfAuthed>
+                  <Login />
+                </RedirectIfAuthed>
+              }
+            />
+            <Route
+              path="/signup"
+              element={
+                <RedirectIfAuthed>
+                  <Signup />
+                </RedirectIfAuthed>
+              }
+            />
 
-          <Route
-            element={
-              <RequireAuth>
-                <Layout />
-              </RequireAuth>
-            }
-          >
-            <Route path="/" element={<Navigate to="/letters" replace />} />
-            <Route path="/letters" element={<Letters />} />
-            <Route path="/letters/new" element={<Compose />} />
-            <Route path="/letters/:id" element={<Reader />} />
-            <Route path="/pairing" element={<Pairing />} />
-            <Route path="/play" element={<Play />} />
-            <Route path="/settings" element={<Settings />} />
-          </Route>
+            <Route
+              element={
+                <RequireAuth>
+                  <Layout />
+                </RequireAuth>
+              }
+            >
+              <Route path="/" element={<Navigate to="/letters" replace />} />
+              <Route path="/letters" element={<Letters />} />
+              <Route path="/letters/new" element={<Compose />} />
+              <Route path="/letters/:id" element={<Reader />} />
+              <Route path="/pairing" element={<Pairing />} />
+              <Route path="/play" element={<Play />} />
+              <Route path="/settings" element={<Settings />} />
+            </Route>
 
-          <Route path="*" element={<Navigate to="/letters" replace />} />
-        </Routes>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Boot>
       </Suspense>
     </BrowserRouter>
   );

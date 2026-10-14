@@ -1,12 +1,12 @@
 /**
  * Thin fetch wrapper.
  *
- * v0.0.2 threw `new Error(await res.text())`, which surfaced raw JSON like
- * `{"error":"Invalid login body: must be at least 3 chars"}` directly into the UI.
- * This parses the server's error envelope and exposes a typed `ApiError`.
+ * Holds the access token in memory (see stores/auth) and transparently refreshes
+ * it once when it expires. Because the token is never persisted, an expired one
+ * is a normal event rather than a sign-out.
  */
 
-import { useAuth } from '../stores/auth';
+import { getAccessToken, useAuth } from '../stores/auth';
 
 export class ApiError extends Error {
   readonly status: number;
@@ -14,11 +14,6 @@ export class ApiError extends Error {
     super(message);
     this.name = 'ApiError';
     this.status = status;
-  }
-
-  /** 401/403 on an authenticated request almost always means an expired token. */
-  get isAuthFailure(): boolean {
-    return this.status === 401 || this.status === 403;
   }
 }
 
@@ -34,23 +29,64 @@ async function readError(res: Response): Promise<string> {
   return res.statusText || `Request failed (${res.status})`;
 }
 
+/** In-flight refresh, so N parallel 401s trigger ONE refresh, not N. */
+let refreshInFlight: Promise<boolean> | null = null;
+
+async function refreshOnce(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = (async () => {
+      try {
+        const res = await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'penpal' },
+        });
+        return res.ok;
+      } catch {
+        return false;
+      } finally {
+        // Cleared on the next tick so callers awaiting this promise all see the
+        // same result before a new refresh can start.
+        setTimeout(() => {
+          refreshInFlight = null;
+        }, 0);
+      }
+    })();
+  }
+  return refreshInFlight;
+}
+
 export async function api<T = unknown>(path: string, init: RequestInit = {}): Promise<T> {
-  const { token, logout } = useAuth.getState();
   const isForm = init.body instanceof FormData;
 
-  const res = await fetch(path, {
-    ...init,
-    headers: {
-      ...(isForm || init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(init.headers ?? {}),
-    },
-  });
+  const send = (): Promise<Response> => {
+    const token = getAccessToken();
+    return fetch(path, {
+      ...init,
+      credentials: 'same-origin',
+      headers: {
+        ...(isForm || init.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init.headers ?? {}),
+      },
+    });
+  };
+
+  let res = await send();
+
+  // One silent refresh, one retry. Never loop: a server that 401s forever must
+  // not turn into a request storm.
+  if (res.status === 401 && !path.includes('/auth/refresh')) {
+    const ok = await refreshOnce();
+    if (ok) {
+      res = await send();
+    } else {
+      useAuth.getState().signOut();
+    }
+  }
 
   if (!res.ok) {
-    const err = new ApiError(res.status, await readError(res));
-    if (err.isAuthFailure && token) logout();
-    throw err;
+    throw new ApiError(res.status, await readError(res));
   }
 
   if (res.status === 204) return undefined as T;

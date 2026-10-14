@@ -17,7 +17,7 @@ interface LoginResponse {
  */
 export default function Login() {
   const nav = useNavigate();
-  const login = useAuth((s) => s.login);
+  const signIn = useAuth((s) => s.signIn);
   const unlock = useVault((s) => s.unlock);
 
   const [email, setEmail] = useState('');
@@ -34,7 +34,7 @@ export default function Login() {
         method: 'POST',
         body: JSON.stringify({ email: email.trim(), password }),
       });
-      login(res.token, res.user);
+      signIn(res.token, res.user);
 
       // Unlock with the same password. If this fails the user still gets in, but
       // lands on the unlock gate rather than a wall of undecryptable letters.

@@ -9,6 +9,11 @@
     "lint": "node --check server/index.js && node --check server/db.js",
     "design:check": "node tools/check-contrast.mjs",
     "test": "vitest run",
+    "backup": "bash scripts/backup.sh",
+    "backup:list": "node scripts/ops-db.js list",
+    "backup:verify": "node scripts/ops-db.js verify",
+    "restore": "bash scripts/restore.sh",
+    "migrate:status": "node scripts/migrate-status.js",
     "e2e": "python3 tests/e2e/app.spec.py",
     "e2e:setup": "python3 -m pip install playwright && python3 -m playwright install --with-deps chromium",
     "build": "node --check server/index.js && node --check server/db.js"
