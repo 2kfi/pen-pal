@@ -27,9 +27,9 @@ work — not a task, not a commit.
 
 | Status | Count | Meaning |
 |---|---|---|
-| **Done** | 19 | Implemented and verified |
-| **Partial** | 4 | Shipped, but the step as written is not complete |
-| **Not started** | 7 | Nothing exists yet |
+| **Done** | 27 | Implemented and verified |
+| **Partial** | 3 | Shipped, but the step as written is not complete |
+| **Not started** | 0 | Nothing exists yet |
 
 "Verified" means: a test asserts it, or a browser drove it. Not "it compiles".
 
