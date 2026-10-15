@@ -3,12 +3,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { initDB, getDb, resetDB, closeDB } = require('./db');
+const { initDB, closeDB } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -142,208 +140,25 @@ const opsRoutes = require('./routes/ops');
 const gameRoutes = require('./routes/games');
 const ritualRoutes = require('./routes/rituals');
 const { uploadRoute, filesRoute } = require('./routes/photos');
+const profileRoutes = require('./routes/profile');
+const pairingRoutes = require('./routes/pairing');
+const notificationRoutes = require('./routes/notifications');
+const adminRoutes = require('./routes/admin');
 
 app.use('/api', authRoutes());
 app.use('/api/letters', letterRoutes());
 app.use(opsRoutes());
 app.use('/api/games', gameRoutes());
 app.use('/api/rituals', ritualRoutes());
+app.use('/api', profileRoutes({ authenticateToken }));
+app.use('/api', pairingRoutes({ authenticateToken, perUser, writeMax: WRITE_MAX, log }));
+app.use('/api/notifications', notificationRoutes({ authenticateToken }));
+app.use('/api', adminRoutes({ authenticateToken, isProd, log }));
 app.use('/api/photos', uploadRoute({ authenticateToken, perUser, writeMax: WRITE_MAX, uploadsDir, log }));
 // NOT express.static. A static mount cannot ask who is asking, and every file
 // in this directory is somebody's photograph. See routes/photos.js.
 app.use('/uploads', filesRoute({ authenticateToken, uploadsDir, log }));
 
-app.get('/api/me', authenticateToken, (req, res) => {
-  const user = getDb().prepare('SELECT id, username, friendly_name, email, pid, public_key as publicKey, encrypted_private_key as encryptedPrivateKey, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?').get(req.user.id);
-  if (!user) return res.status(404).json({ error: 'User not found' });
-  res.json(user);
-});
-
-app.put('/api/me', authenticateToken, (req, res) => {
-  const { friendly_name, age, birthday, favorite_food, bio } = req.body || {};
-  try {
-    getDb().prepare(`UPDATE users SET friendly_name = COALESCE(?, friendly_name), age = COALESCE(?, age),
-      birthday = COALESCE(?, birthday), favorite_food = COALESCE(?, favorite_food), bio = COALESCE(?, bio) WHERE id = ?`)
-      .run(friendly_name ?? null, age ?? null, birthday ?? null, favorite_food ?? null, bio ?? null, req.user.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Update failed' });
-  }
-});
-
-/**
- * A pair is stored as one row per user, so checking one direction is sufficient —
- * both rows are always written together inside the same transaction-ish block.
- */
-function isPaired(db, aId, bId) {
-  return !!db.prepare('SELECT user_id FROM pairs WHERE user_id = ? AND partner_id = ?').get(aId, bId);
-}
-
-/** Returns the current partner row for a user, or undefined. */
-function currentPair(db, userId) {
-  return db.prepare('SELECT * FROM pairs WHERE user_id = ?').get(userId);
-}
-
-app.post('/api/pairing/request', authenticateToken, perUser(WRITE_MAX), (req, res) => {
-  const { targetPid } = req.body || {};
-  const bad = checkStr(targetPid, { required: true, min: 1, max: 16 });
-  if (bad) return res.status(400).json({ error: `Invalid pairing body: ${bad}` });
-  if (targetPid === req.user.pid) return res.status(400).json({ error: 'Cannot pair with yourself' });
-  try {
-    const db = getDb();
-    const target = db.prepare('SELECT id FROM users WHERE pid = ?').get(targetPid);
-    if (!target) return res.status(404).json({ error: 'User not found' });
-
-    const existing = db.prepare('SELECT id FROM pairings WHERE requester_id = ? AND target_pid = ? AND status = ?').get(req.user.id, targetPid, 'pending');
-    if (existing) return res.status(400).json({ error: 'Request already sent' });
-
-    db.prepare('INSERT INTO pairings (requester_id, target_pid) VALUES (?, ?)').run(req.user.id, targetPid);
-    db.prepare('INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)')
-      .run(target.id, 'pairing_request', 'New Pairing Request', `${req.user.username} wants to pair with you!`);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not send pairing request' });
-  }
-});
-
-app.get('/api/pairing/status', authenticateToken, (req, res) => {
-  const db = getDb();
-  const incoming = db.prepare(`SELECT p.id, u.username, u.friendly_name, u.pid FROM pairings p JOIN users u ON p.requester_id = u.id WHERE p.target_pid = ? AND p.status = 'pending'`).all(req.user.pid);
-  const outgoing = db.prepare('SELECT id, target_pid, status FROM pairings WHERE requester_id = ?').all(req.user.id);
-  const currentPairRow = currentPair(db, req.user.id);
-
-  let partner = null;
-  if (currentPairRow) {
-    partner =
-      db
-        .prepare('SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?')
-        .get(currentPairRow.partner_id) ?? null;
-  }
-
-  res.json({ incoming, outgoing, partner });
-});
-
-app.post('/api/pairing/accept', authenticateToken, (req, res) => {
-  const { requestId } = req.body || {};
-  if (requestId === undefined || requestId === null) return res.status(400).json({ error: 'requestId is required' });
-  try {
-    const db = getDb();
-    const request = db.prepare('SELECT * FROM pairings WHERE id = ?').get(requestId);
-    if (!request || request.target_pid !== req.user.pid) return res.status(403).json({ error: 'Invalid request' });
-    if (request.status !== 'pending') return res.status(400).json({ error: 'This invite was already handled' });
-
-    const target = db.prepare('SELECT id FROM users WHERE pid = ?').get(request.target_pid);
-    if (!target) return res.status(404).json({ error: 'User not found' });
-
-    // One partner, at a time. The question is "is EITHER party already paired with
-    // anyone", not "are these two already paired" — checking the latter lets a
-    // paired user accept a second partner and then hit the pairs PRIMARY KEY.
-    // v0.0.2 checked nothing, so a user could accumulate unlimited pairs and
-    // `SELECT * FROM pairs WHERE user1_id = ? OR user2_id = ?` with .get()
-    // returned an ARBITRARY one — meaning Compose could silently post a letter to
-    // whichever partner the query happened to surface first.
-    const alreadyPaired = db
-      .prepare('SELECT user_id FROM pairs WHERE user_id IN (?, ?) LIMIT 1')
-      .get(request.requester_id, target.id);
-
-    if (alreadyPaired) {
-      db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('superseded', requestId);
-      return res.status(409).json({
-        error: 'One of you is already paired. Unpair before accepting someone new.',
-      });
-    }
-
-    db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('accepted', requestId);
-    // Two rows, one per user. user_id is the PRIMARY KEY, so a second pairing for
-    // either party fails loudly here instead of silently accumulating.
-    const insertPair = db.prepare('INSERT INTO pairs (user_id, partner_id) VALUES (?, ?)');
-    insertPair.run(request.requester_id, target.id);
-    insertPair.run(target.id, request.requester_id);
-    db.prepare('INSERT INTO notifications (user_id, type, title, body) VALUES (?, ?, ?, ?)')
-      .run(request.requester_id, 'pairing_accepted', 'Pairing accepted', `${req.user.username} accepted your pairing request!`);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not accept pairing' });
-  }
-});
-
-app.post('/api/pairing/reject', authenticateToken, (req, res) => {
-  const { requestId } = req.body || {};
-  if (requestId === undefined || requestId === null) return res.status(400).json({ error: 'requestId is required' });
-  try {
-    const db = getDb();
-    const request = db.prepare('SELECT * FROM pairings WHERE id = ?').get(requestId);
-    if (!request || request.target_pid !== req.user.pid) return res.status(403).json({ error: 'Invalid request' });
-    if (request.status !== 'pending') return res.status(400).json({ error: 'Request already handled' });
-
-    db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('rejected', requestId);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not reject pairing' });
-  }
-});
-
-app.delete('/api/pairs/unpair', authenticateToken, (req, res) => {
-  try {
-    // Both rows are removed together so the two sides can never disagree.
-    getDb().prepare('DELETE FROM pairs WHERE user_id = ? OR partner_id = ?').run(req.user.id, req.user.id);
-    res.json({ success: true });
-  } catch (err) {
-    res.status(500).json({ error: 'Could not unpair' });
-  }
-});
-
-function pageParams(req) {
-  const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 50, 1), 100);
-  const cursor = req.query.cursor !== undefined ? parseInt(req.query.cursor, 10) : null;
-  return { limit, cursor: Number.isInteger(cursor) ? cursor : null };
-}
-
-/**
- * Letters are paginated by a monotonic id cursor, oldest first.
- *
- * Delivery gating: a letter with a future `delivered_at` is visible ONLY to its
- * sender, who should see it sitting in transit. The recipient sees nothing until
- * it arrives. v0.0.2 stored `delivered_at` and never filtered on it, so the
- * "Deliver no earlier than" date was decorative — scheduled mail arrived at once.
- */
-app.get('/api/notifications', authenticateToken, (req, res) => {
-  const { limit, cursor } = pageParams(req);
-  const db = getDb();
-  const notifications = cursor === null
-    ? db.prepare('SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT ?').all(req.user.id, limit)
-    : db.prepare('SELECT * FROM notifications WHERE user_id = ? AND id < ? ORDER BY id DESC LIMIT ?').all(req.user.id, cursor, limit);
-  res.json(notifications);
-});
-
-app.put('/api/notifications/read', authenticateToken, (req, res) => {
-  getDb().prepare('UPDATE notifications SET read = 1 WHERE user_id = ?').run(req.user.id);
-  res.json({ success: true });
-});
-
-// Jellyfin integration removed (V2 plan step 8). Browsing a shared media server is
-// not correspondence — it was a different product bolted onto this one, and it
-// dragged in an unauthenticated image origin that fought our CSP.
-// Encrypted keepsakes attached to letters replace it.
-
-
-// DB Reset: disabled in production; otherwise requires ADMIN_TOKEN. Never logged.
-app.post('/api/admin/reset-db', authenticateToken, (req, res) => {
-  if (isProd) return res.status(404).json({ error: 'Not found' });
-  const expected = process.env.ADMIN_TOKEN;
-  if (!expected) return res.status(403).json({ error: 'Admin reset disabled' });
-  const got = req.headers['x-admin-token'] || req.body?.adminToken || req.body?.code;
-  if (got !== expected) return res.status(403).json({ error: 'Invalid admin token' });
-
-  try {
-    resetDB();
-    log('Database has been reset');
-    res.json({ success: true, message: 'Database reset successfully' });
-  } catch (err) {
-    log('DB reset failed', { error: err.message });
-    res.status(500).json({ error: 'Failed to reset database' });
-  }
-});
 
 // Multer/fileFilter errors -> 400 JSON (must be after routes)
 const clientDist = path.join(__dirname, '../client/dist');
