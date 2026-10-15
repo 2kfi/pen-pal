@@ -50,54 +50,54 @@ The app could not be logged into. This phase made it usable.
 | 5 | ✅ | `crypto.ts` exported four functions nothing called. Keys now generated in-browser, PBKDF2 600k, per-session vault. **Compose refuses to send rather than falling back to plaintext** |
 | 6 | ✅ | `helmet()` defaults shipped `upgrade-insecure-requests`, breaking plain-HTTP LAN. Explicit CSP. Fonts self-hosted (the Google Fonts link was blocked by our own CSP) |
 
-### Phase 1 — Product reset (2/4)
+### Phase 1 — Product reset (4/4 ✅)
 
 | Step | | Note |
 |---|---|---|
 | 7 | ✅ | Thesis written into `docs/DESIGN.md` |
 | 8 | ✅ | Jellyfin cut entirely — server routes, module, page, two stores, MiniPlayer |
-| 9 | 🔶 | `pairs` rekeyed on `user_id`, so one-partner is a storage guarantee. **Letter lifecycle states (`draft → sealed → in_transit → opened → replied`) do not exist** |
-| 10 | ❌ | No SSE, no IndexedDB queue, no optimistic writes |
+| 9 | ✅ | `pairs` rekeyed on `user_id`, so one-partner is a storage guarantee. Lifecycle states (`sealed → in_transit → opened → replied`) in `040-letter-states`. State is **derived on read**, so storage can lag and the API is still correct |
+| 10 | ✅ | `client/src/lib/sync.ts`: `(created_at, id)` cursor paging, SSE with verified teardown, IndexedDB outbox that is idempotent against a retry, optimistic writes that keep the draft on failure |
 
-### Phase 2 — Design remake (6/7)
+### Phase 2 — Design remake (7/7 ✅)
 
 | Step | | Note |
 |---|---|---|
 | 11 | ✅ | Token system in `client/src/tokens.css` |
-| 12 | ✅ | Light accent failed AA at 4.45:1 → fixed at source to `#a8490a`. Split `--rule` / `--rule-strong`. **CI gate: `npm run design:check`, 22 pairs** |
+| 12 | ✅ | Light accent failed AA at 4.45:1 → fixed at source to `#a8490a`. Split `--rule` / `--rule-strong`. **CI gate: `npm run design:check`, 32 pairs** — `--paper-2` added after it was found to be hiding two live failures |
 | 13 | ✅ | Mobile-first with a bottom tab bar (v0.0.2 shipped zero media queries) |
 | 14 | ✅ | Landmarks, skip link, real labels, `:focus-visible` (there were none), 44px targets, `aria-live` |
 | 15 | ✅ | Paper/wax/postmark. Spine layout recovered from the deleted legacy CSS |
 | 16 | ✅ | The seal-and-send moment: 700ms fold → wax press → travel, exactly per DESIGN §6. Fails closed with a 2500ms liveness guard |
-| 17 | ❌ | No `/style` gallery, so the design system can rot silently |
+| 17 | ✅ | `/style` renders live from the tokens, honest about FAILs, dev-gated. `tests/rituals.test.js` fails if the gallery and the CI gate ever drift apart |
 
-### Phase 3 — Make it a real app (2/6)
+### Phase 3 — Make it a real app (5/6)
 
 | Step | | Note |
 |---|---|---|
-| 18 | ❌ | `server/index.js` is still one ~500-line file |
+| 18 | 🔶 | Five routers own their concerns (`auth`, `letters`, `games`, `rituals`, `ops`). **`server/index.js` is still 456 lines with 11 inline routes** — photos, pairing, notifications, profile |
 | 19 | 🔶 | Uploads are auth-gated, magic-byte sniffed, re-encoded through sharp, EXIF verified gone. **No pair check — any authenticated user with a URL can fetch** |
-| 20 | ❌ | **JWT still in `localStorage`. One XSS = full account loss.** Highest-value security item remaining |
+| 20 | ✅ | Access token in a module closure, never persisted. Refresh token is an `httpOnly`/`SameSite=Strict` cookie stored as a SHA-256 hash, rotated on every use, with family revocation on reuse. One shared in-flight refresh, so nothing can present a single-use token twice |
 | 21 | ✅ | sharp/libvips pipeline, 9 tests verified to fail against the old code |
-| 22 | 🔶 | `/healthz` + compose healthcheck exist. No migration runner, no scheduled backups, no error tracking |
+| 22 | ✅ | Migration runner with a ledger and a duplicate-version guard, `/healthz` that fails on an unreachable database or a pending migration, `scripts/backup.sh` using SQLite's online `.backup` (never `cp` on a live WAL), request ids threaded into logs |
 | 23 | ✅ | Chess perft, crypto round-trips, 70 API tests, Playwright E2E wired into CI |
 
-### Phase 4 — Fix the games (2/5)
+### Phase 4 — Fix the games (4/5, one partial)
 
 | Step | | Note |
 |---|---|---|
 | 24 | ✅ | Full rules engine. **perft: startpos exact to depth 4 (197281), Positions 3/4/5 exact** |
-| 25 | ❌ | No search engine at all |
-| 26 | ❌ | Two-player chess is local-only |
-| 27 | ❌ | No rituals — daily puzzle, streaks, anniversary |
+| 25 | ✅ | Iterative deepening in a Web Worker, 5 levels, PSTs, transposition table, cooperative cancel. **~30–50k nodes/sec** — slow, because every node is an await. `a3` as its best first move at depth 12 is not explained yet |
+| 26 | 🔶 | Game sessions exist server **and** client side, moves sealed E2E, turn enforced server-side, take-back by mutual acceptance. **No page drives `useGames` — `/play`'s pen-pal mode says so rather than faking it** |
+| 27 | ✅ | Daily shared puzzle (deterministic from pair id + date, so neither side learns the other's answer first), letter streak, anniversary. **Answers and streak state are encrypted at rest**; the test reads the db, `-wal` and `-shm` |
 | 28 | ✅ | Promotion picker, drag **and** click, last-move highlight, captured pieces, move list, coordinates, sound off by default |
 
-### Phase 5 — Ship it (1/2)
+### Phase 5 — Ship it (2/2 ✅)
 
 | Step | | Note |
 |---|---|---|
 | 29 | ✅ | Least-privilege tokens, concurrency groups, E2E gating the image build, deploy with health check **and rollback**, CodeQL, Dependabot |
-| 30 | 🔶 | README, `SELF-HOSTING.md`, `DESIGN.md`, `HANDOFF.md` written. **No migration path for v0.0.2 databases, no `SECURITY.md`** |
+| 30 | ✅ | `MIGRATION.md` and `SECURITY.md` added. The v0.0.2 upgrade path is tested against a byte-accurate old-schema database, and `MIGRATION.md` states plainly what it cannot preserve |
 
 ---
 
@@ -111,6 +111,9 @@ These surfaced during the work and are tracked here so they don't get lost.
 | **Kiwipete perft short** | Depth 2 is 1 node short, depth 3 is 51 short. Not root-caused. Asserted in the test name so it stays visible |
 | **Not installable** | No manifest, no service worker, no offline. A URL in a browser |
 | **Rate limiter keyed on proxy IP** | `trust proxy` was never set, so behind Caddy/nginx one person could lock out their pen pal. Fixed |
+| **Photo pair check** | Any authenticated user with a URL can fetch another pair's attachment. Encrypted? No — plaintext at rest |
+| **Engine strength** | Depth 12 in 15s is fine for `casual`/`club`, marginal for `tough`. Do not offer `strong` to a competent player until the `a3` opening is explained |
+| **`/healthz` 503s for 5s after boot** | Deliberate warmup grace. CI polls for 30s. Set `HEALTHZ_BOOT_GRACE_MS=0` if your orchestrator gives up faster |
 
 ---
 
@@ -119,10 +122,10 @@ These surfaced during the work and are tracked here so they don't get lost.
 Every one of these must stay green.
 
 ```bash
-npm run design:check                      # 22 contrast pairs
+npm run design:check                      # 32 contrast pairs
 npm run lint
-npm test                                  # 70 API tests
-npm --prefix client test                  # 44 crypto + perft
+npm test                                  # 245 server tests
+npm --prefix client test                  # 50 crypto, perft, session
 npm --prefix client run build             # typecheck + vite build
 ```
 
