@@ -1,134 +1,137 @@
-# PenPal: Design Direction
+# PenPal — Design Direction
 
-> This file is the **soul**. `docs/DESIGN.md` is the **spec**: tokens, type scale, motion table, accessibility floor. Never put an implementation value here. Never put a feeling there.
+> **This file defines intent.** `docs/DESIGN.md` defines the design-system specification: tokens, type scale, motion timings, and accessibility thresholds. Keep implementation values in the spec, not here. Keep the reasons behind the design here, not buried in components.
 >
-> Read direction here, then spec, then write code. If the two ever disagree, the spec wins for values and this file wins for intent, and the disagreement gets fixed in writing, not in a component.
+> Read this direction first, then the spec, then build. If they disagree, preserve the intent described here and use the spec for implementation values. Record and resolve the disagreement in writing; do not quietly invent a third answer in a component.
 
-## Design Read
+## The product in one sentence
 
-Reading this as: **a private correspondence app for two adults writing to each other at night on a phone**, in a **paper-and-ink language that is quiet everywhere except one moment**, dials **ENERGY 2 / RHYTHM 2 / MOTION 2**.
+**PenPal is private correspondence for people who want to write letters, not another chat stream.**
 
-## Identity
+The experience is quiet, personal, and deliberately paced. A letter may take time to arrive or become available, but that wait must be understandable and trustworthy—not simulated, confusing, or used to disguise ordinary loading.
 
-**Two people. One sealed channel. Slow on purpose.**
+The design should make the wait feel meaningful without making the interface feel inconvenient.
 
-In every other app you use, latency is a defect to be engineered away. Here it is the product. A letter cannot be opened early. It cannot be edited after it is sent. It travels. That constraint is not a limitation we apologise for, it is the reason anybody opens this instead of a chat app.
+## The identity
 
-Every design decision below descends from one sentence: **make the wait feel worth it.**
+**Paper. Ink. One sealed letter.**
 
-If a change makes the product faster but makes someone feel less anticipation, it is the wrong change.
+The product's signature is the feeling of sending and receiving correspondence: something written with care, sealed, carried, and read. The interface should support that idea without pretending to be a physical desk or an antique stationery shop.
 
-## The one memorable thing
+Intimacy means personal, not automatically romantic. Warmth should come from material, typography, language, and pacing—not hearts, mascots, forced sentiment, or cute decoration.
 
-**The wax seal.**
+## Core principles
 
-A sent letter physically folds, presses, and leaves. It is the only ornament in the entire product. Everything else is paper, ink, and restraint.
+### 1. Correspondence comes before the interface
 
-We get one bold gesture. Spending it twice would make it noise. When a screen has a seal and a primary button, one of them loses.
+The words people write and read are the main content. Give them room, legible type, and a comfortable reading measure. Navigation and metadata should help people understand where a letter is and what they can do with it; they should never compete with the letter itself.
 
-## Personality
+### 2. The wax seal is the signature gesture
 
-Each pair names what we are and what we refuse, because a word alone does not constrain anything.
+The seal is the one distinctive visual moment: a tangible expression of sending, not a decoration to repeat across the interface. Use it where the act of sealing matters. Do not turn every screen, card, and button into another version of the seal.
 
-| We are | We are not |
-|---|---|
-| **Quiet** | Shy. Quiet is a volume setting. Shy is an apology. |
-| **Deliberate** | Slow-witted. Deliberate is a choice. Slow-witted is a defect. |
-| **Physical** | Skeuomorphic. Paper texture and a wax press, never a fake desk or a fake envelope flap that curls wrong. |
-| **Intimate** | Cute. Two adults, not a couple of cartoon animals. No mascots, no hearts, no exclamation marks. |
-| **Honest** | Austere. Honest admits what the product cannot do. Austere hides it. |
-| **Warm** | Cosy. Warm is a palette. Cosy is a genre. |
+A clear primary action is still necessary. It should be visually calm enough that it supports the seal instead of competing with it.
 
-## Palette
+### 3. Slow does not mean unclear
 
-Per WCAG and good sense: **two neutrals plus one accent**, with two reserved status colours that are not decoration and never compete with the accent.
+Waiting is part of the product, so show the real state of a letter in plain language. Make clear whether it is a draft, sent, travelling, or ready to open. Never invent activity, imply progress that is not happening, or leave someone guessing whether an action worked.
 
-| Token | Role | Why this and not another |
-|---|---|---|
-| `--ink` | The ground | Genuinely dark in the dark theme, genuinely light in the light theme. v0.0.2 faked paper with tinted near-black `#0c0d0f`. Paper has a colour. Paper is warm. |
-| `--paper` / `--paper-2` | Raised surfaces | Two levels, because an input well needs to read as a well and a card needs to read as a card. |
-| `--wax` | **The one accent.** The seal, or the primary action | Amber because sealing wax has been amber for as long as there has been sealing wax to colour. Not a brand colour, a material colour. Anything else is decoration pretending to be meaning. |
-| `--text` / `--muted` | Words | `--muted` is the **lowest** value permitted. If a design needs something dimmer, the design is wrong, not the token. |
-| `--in-transit` | **Means one thing: travelling** | Teal is not decorative. If teal appears anywhere that is not a letter in motion, it is a bug. |
-| `--danger` | Destructive and error only | Nothing else may use it. |
+Do not add delay for atmosphere. The product's actual correspondence rules create the wait; the interface explains it honestly.
 
-Both themes are **authored**, not derived by inverting the other. A computed light theme always lands in the wrong place on the contrast scale.
+### 4. Quiet is not empty
 
-**Contract, verified in CI:** body text at or above 4.5:1, non-text UI at or above 3:1, on every surface a token is actually painted on. `--paper-2` is the lightest dark surface, so it is the worst case for every foreground, and it is checked explicitly. A token that passes on the page and fails in a field is a failure.
+Use restraint to create focus, not to remove useful guidance. Hierarchy should come from spacing, type, contrast, alignment, and a small number of meaningful surfaces—not from decorating every section.
 
-**Status is never colour alone.** Every state carries a word. Teal plus the word "travelling", never teal on its own.
+Each screen should have one clear purpose and a layout suited to that purpose. Do not force the whole product into the same card template.
+
+### 5. Warm, physical, and contemporary
+
+Paper and ink are the material references, not a command to imitate real stationery literally. Subtle surface differences, fine rules, and considered typography can suggest physicality. Avoid fake desks, elaborate envelope effects, heavy textures, and shadows without a clear purpose.
+
+### 6. Trust is part of the visual design
+
+Privacy, delivery, and availability must be communicated plainly. Status must never depend on colour alone. Do not use guilt to drive engagement, fabricate metrics, or make a control look usable when it is not.
+
+## Colour and surfaces
+
+Use a small, semantic palette. The dark and light themes are both deliberately designed; neither should be a simple inversion of the other.
+
+- **Ink** establishes the page ground and the strongest dark/light contrast.
+- **Paper and raised paper** distinguish the page, writing wells, and genuinely separate surfaces.
+- **Wax** is the primary accent. Reserve it for the seal and the most important action or state that needs emphasis. It is a material cue, not a licence to decorate.
+- **Text and muted text** provide readable hierarchy. Muted text is still content and must remain legible.
+- **In-transit colour** means exactly that a letter is travelling. Pair it with an explicit label; never use it as a general accent.
+- **Danger colour** is for errors and destructive actions only.
+
+Colour should clarify hierarchy and state. If a colour has no semantic job, remove it. Use borders and surface differences before adding shadows. A shadow is justified only when a surface needs to feel physically elevated.
+
+The spec defines the actual values and contrast requirements. Do not put raw colour values in this file or introduce one-off values in components.
 
 ## Typography
 
-Three families, three jobs, two weights each, self-hosted, no CDN. A letter-writing app that phones a font server on every read has missed the point.
+Three type families, each with a distinct role:
 
-| Role | Family | Why |
+| Role | Family | Use |
 |---|---|---|
-| **Display** | `Syne` | A geometric display face with slightly awkward, deliberate letterforms. The app's name should not be set in the same neutral grotesque as every dashboard. Large sizes only, never a label. |
-| **Reading** | `Literata` | Drawn for long-form on screen. **The letter body is the product.** Every word a person writes or reads is set here, at a comfortable measure and generous leading. A tool that renders love letters in 12px UI sans has told you what it thinks of them. |
-| **Postmark** | `Space Mono` | This is the one that usually gets called out as an AI default. Here it earns its place: **a postmark is the single machine-made object in a paper world.** It stamps facts, never prose. Uppercase and tracked, and it is allowed to be, because it is imitating rubber type. |
+| Display | `Syne` | The PenPal name and a small number of large, deliberate display moments. Never use it as a default label font. |
+| Reading | `Literata` | Letter content and other long-form reading. The writing itself deserves the strongest typographic treatment. |
+| Postmark | `Space Mono` | Short factual metadata such as dates, distance, and delivery state—the machine-marked details in a paper world. Never use it for letter prose. |
 
-No fourth family. No variable-weight tricks. Body copy never in mono, ever.
+Keep the hierarchy purposeful and the number of weights controlled. Do not introduce another family or use typography as decoration when spacing and composition solve the problem. Fonts are self-hosted; reading the product should not depend on a third-party font request.
 
-## Mood
+## Layout and composition
 
-**A desk at night, or a letter on a table at morning.** Warm ground, low light, nothing glowing, nothing urgent. The interface should feel like it is waiting for you, and not like it is waiting on a server.
+Use one consistent application shell, but let each screen's job determine its composition:
 
-Dark is the default and that is a decision, not a trend. This product is used at night, by two people, alone. The dark theme is authored first and the light theme is the alternative, not the other way around. Both must be good enough to ship on their own.
+- **Archive:** a continuous spine, with letters arranged as points along a line rather than unrelated cards in a grid. The spine is a core part of PenPal's visual identity.
+- **Letter reading:** one measured column that keeps attention on the words and gives the text room to breathe.
+- **Calendar:** a grid when the task is understanding dates and timing.
+- **Board:** a square or spatial composition when the task genuinely benefits from one.
 
-## Dials
+These are patterns, not excuses to add screens or complexity. Keep navigation predictable across the app, and introduce a distinct layout only when it better serves the task.
 
-| Dial | Value | What that commits us to |
-|---|---|---|
-| **ENERGY** | **2** | We say hello exactly once per screen, in the seal. Everything else holds its voice down. |
-| **RHYTHM** | **2** | One consistent shell, and screen compositions that genuinely differ by job: a spine for the archive, a single measured column for reading, a grid for the calendar, a square for the board. Not one template stretched four ways. |
-| **MOTION** | **2** | One orchestrated moment and nothing decorative. |
+## Motion and feedback
 
-**The one permitted loop.** A letter in transit drifts, slowly, for as long as it is travelling. This is the single exception to "nothing loops forever", and the reason is written down: the drift *is* the state, not an indicator for it. It stops the moment the letter is opened. If it were a spinner it would be noise; because it is the product's central concept made visible, it is the interface.
+Motion is scarce and purposeful. It should explain an action or reveal a real state, never decorate an idle screen.
 
-Everything else answers an action the person took. Nothing animates on page load. No scroll reveals.
+- The sealing-and-sending sequence is the signature interaction. It should feel considered, brief, and connected to the action the person just took.
+- A travelling letter may drift slowly while it is genuinely in transit. This is the one permitted continuous motion because it represents an ongoing state. Stop it as soon as that state ends.
+- Other movement should respond directly to a user action. No decorative loops, automatic entrance choreography, scroll-triggered reveals, or celebration the user did not initiate.
+- With reduced-motion preferences enabled, remove nonessential animation and preserve the meaning of the state through a clear static presentation.
 
-With `prefers-reduced-motion`, motion does not shorten. It does not happen.
+The spec owns durations, easing, and implementation tokens. Components should consume those definitions rather than quietly maintaining their own competing timings.
 
-## The swap test
+## Language and interface behaviour
 
-> If the logo and the name were swapped for another product's, would this still feel like itself?
+The interface speaks plainly and calmly. It does not apologise for being deliberate, dramatise routine events, or pressure people to return.
 
-The spine would not survive. Neither would the fact that the accent is amber because wax is amber, that the reading face is chosen because the product is prose, or that the app is willing to be slow. That is the test, and it is why we can be confident the direction is real rather than decoration on a template.
+- Label actions with words that say what will happen: **“Seal and send”**, not an ambiguous icon or an arrow appended to a label.
+- Use uppercase postmark styling only for concise, factual metadata—not as a label above every heading.
+- Use separators only when they distinguish real information. Decorative dots and ornamental punctuation add noise.
+- Explain states in words as well as colour. A status indicator should answer the user's question, not make them decode the palette.
+- Keep error messages specific and pair them with a useful next step whenever one exists.
+- Do not add streaks, guilt-driven unread counts, fake activity, invented numbers, or decorative charts. Show counts and metrics only when they help someone make a decision.
 
-## What we refuse
+## Interaction and accessibility commitments
 
-Binding. These are not preferences, they are the shape of the product.
+These are product-quality requirements, not optional polish:
 
-| We refuse | Because |
-|---|---|
-| A card grid where letters belong | Letters are objects on a **spine**, a continuous line with each letter as a node. This is the one idea that makes the product recognisable. It came from a stylesheet v0.0.2 abandoned, rebuilt rather than copied. |
-| Shadows on everything | Depth comes from paper edges and ink weight. Only something that physically lifts earns a shadow. |
-| An uppercase label above every heading | **Postmarks are the only uppercase**, and they carry real data: a date, a distance, a state. |
-| Middle dots as decoration | Dots separate real facts ("sent 14 Mar, 2,140 km"). A dot with nothing between it is a bullet point in disguise. |
-| Arrows on buttons | Buttons say the action. "Seal and send", not "Send →". |
-| Motion on load, scroll reveals, confetti | A sent letter should arrive, not appear. Same logic: nothing celebrates that the person did not cause. |
-| Streak pressure, unread badges as guilt | The product is slow on purpose. A counter that punishes absence is the exact opposite of the thesis. |
-| Fake activity, invented numbers, decorative charts | There are no users yet. Invented metrics are lies with a percentage sign. |
-| Stock illustration, 3D blobs, an AI sparkle | The wax is the illustration. One is enough. |
-| A design-system playground in production | The gallery is a development tool. Shipping internals is how tools become attack surface. |
+- Every visible interactive element works and has a clear purpose. Do not ship dead controls or links to pages that do not exist.
+- A full letter round trip can be completed with a keyboard. Dragging may supplement an interaction, but must not be the only way to complete it.
+- Every data-bearing surface has a considered empty state, loading state, and error state. Errors should explain the problem and the next useful action where possible.
+- Status is never conveyed by colour alone.
+- Reading and controls remain usable in both themes, at supported text sizes, and with reduced motion enabled.
+- Design-system galleries and debugging tools belong in development tooling, not in the production experience.
 
-## Before you add anything
+The specification defines measurable contrast and other accessibility thresholds. Verify the real combinations in which tokens are used, not just isolated swatches.
 
-Three questions, in order. If the first one has no answer, stop.
+## Before adding an element
 
-1. **What job does this element do on this screen?** Not what it is, what it is *for*. If the answer is "the design needs it there", it does not go in.
-2. **What is the reason for this technique?** One line, written down. A gradient that separates two levels of hierarchy is craft. The same gradient on every surface is wallpaper. No reason means no technique.
-3. **What does it look like with the logo removed?** If the screen would suit any other product, it is generic, and generic is the failure this document exists to prevent.
+Ask these questions in order:
 
-Then, non-negotiable and not up for discussion:
+1. **What job does it do on this screen?** If the only answer is “it looks designed,” leave it out.
+2. **Why this treatment?** Be able to explain the choice in one sentence. A gradient, texture, shadow, or animation needs a specific reason; repeated decoration is not a reason.
+3. **Does it help someone write, read, understand a letter's state, or move through the app?** If not, it needs a strong justification.
+4. **Would the screen still feel like PenPal without the logo?** The archive spine, the restrained use of wax, the reading typography, and the honest treatment of waiting should make the experience recognisable.
 
-- Colour is never the only carrier of state.
-- Every interactive element works, or it does not exist. No dead controls, no links to unwritten pages.
-- Every surface that shows data has an empty state, a loading state, and an error state that names the cause and the next action.
-- Keyboard completes a full letter round trip. Drag is an addition, never the requirement.
-- Raw hex does not appear outside `tokens.css`. If a value is not a token, it does not exist.
-
-## Known drift
-
-The spec and the build have diverged in four known places. Listed so they get fixed rather than inherited: light-theme wax is `#a8490a` in code and still documented as `#b45309`; dark `--rule`, `--rule-strong` and `--muted` changed during contrast repair; three motion tokens are declared and referenced by nothing; `SealAnimation` hardcodes its timings in JavaScript, so the declared 700ms and the running 700ms are unrelated numbers that happen to agree.
+When in doubt, remove the decoration—not the information the person needs.
