@@ -27,8 +27,8 @@ work — not a task, not a commit.
 
 | Status | Count | Meaning |
 |---|---|---|
-| **Done** | 27 | Implemented and verified |
-| **Partial** | 3 | Shipped, but the step as written is not complete |
+| **Done** | 29 | Implemented and verified |
+| **Partial** | 1 | Shipped, but the step as written is not complete |
 | **Not started** | 0 | Nothing exists yet |
 
 "Verified" means: a test asserts it, or a browser drove it. Not "it compiles".
@@ -71,12 +71,12 @@ The app could not be logged into. This phase made it usable.
 | 16 | ✅ | The seal-and-send moment: 700ms fold → wax press → travel, exactly per DESIGN §6. Fails closed with a 2500ms liveness guard |
 | 17 | ✅ | `/style` renders live from the tokens, honest about FAILs, dev-gated. `tests/rituals.test.js` fails if the gallery and the CI gate ever drift apart |
 
-### Phase 3 — Make it a real app (5/6)
+### Phase 3 — Make it a real app (6/6 ✅)
 
 | Step | | Note |
 |---|---|---|
-| 18 | 🔶 | Five routers own their concerns (`auth`, `letters`, `games`, `rituals`, `ops`). **`server/index.js` is still 456 lines with 11 inline routes** — photos, pairing, notifications, profile |
-| 19 | 🔶 | Uploads are auth-gated, magic-byte sniffed, re-encoded through sharp, EXIF verified gone. **No pair check — any authenticated user with a URL can fetch** |
+| 18 | ✅ | Nine routers, **zero inline routes**. `server/index.js` is 229 lines and holds only what an entrypoint should: helmet, CORS, CSP, parsers, rate limits, mounts, SPA fallback, shutdown |
+| 19 | ✅ | Uploads are auth-gated, magic-byte sniffed, re-encoded through sharp, EXIF verified gone. **And authorised**: `/uploads` is no longer a static mount, it resolves the request to its `photos` row and allows only the uploader or the other party in the attached letter. Denials return 404, not 403, so it cannot be used to enumerate |
 | 20 | ✅ | Access token in a module closure, never persisted. Refresh token is an `httpOnly`/`SameSite=Strict` cookie stored as a SHA-256 hash, rotated on every use, with family revocation on reuse. One shared in-flight refresh, so nothing can present a single-use token twice |
 | 21 | ✅ | sharp/libvips pipeline, 9 tests verified to fail against the old code |
 | 22 | ✅ | Migration runner with a ledger and a duplicate-version guard, `/healthz` that fails on an unreachable database or a pending migration, `scripts/backup.sh` using SQLite's online `.backup` (never `cp` on a live WAL), request ids threaded into logs |
@@ -111,7 +111,6 @@ These surfaced during the work and are tracked here so they don't get lost.
 | **Kiwipete perft short** | Depth 2 is 1 node short, depth 3 is 51 short. Not root-caused. Asserted in the test name so it stays visible |
 | **Not installable** | No manifest, no service worker, no offline. A URL in a browser |
 | **Rate limiter keyed on proxy IP** | `trust proxy` was never set, so behind Caddy/nginx one person could lock out their pen pal. Fixed |
-| **Photo pair check** | Any authenticated user with a URL can fetch another pair's attachment. Encrypted? No — plaintext at rest |
 | **Engine strength** | Depth 12 in 15s is fine for `casual`/`club`, marginal for `tough`. Do not offer `strong` to a competent player until the `a3` opening is explained |
 | **`/healthz` 503s for 5s after boot** | Deliberate warmup grace. CI polls for 30s. Set `HEALTHZ_BOOT_GRACE_MS=0` if your orchestrator gives up faster |
 
