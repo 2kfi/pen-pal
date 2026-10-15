@@ -749,12 +749,27 @@ describe('the answer is ciphertext at rest', () => {
     // Long enough that a collision is not a plausible explanation.
     expect(occurrences(bytes, CANARY)).toBe(0);
     expect(occurrences(bytes, CANARY.slice(0, 24))).toBe(0);
-    // The two real numeric answers are checked against the file too, but only
-    // as complete quoted JSON values — `"8"` — which base64 cannot produce, so
-    // a hit here really would mean the server had stored the answer in the clear.
-    // A bare `8` would be meaningless: it occurs in every ciphertext by chance.
+    // The two real numeric answers are checked against the file too — but keyed,
+    // not bare. This assertion was `"18"` and it failed, correctly, because a
+    // user id is a JSON *object key* in the envelope and keys are quoted:
+    //
+    //     "keys":{"18":"CMraVU7Bi7AkzVhxKdi…"}
+    //
+    // The answer was 18, the key was 18, and nothing leaked. Searching for a
+    // bare quoted number therefore proves nothing at all — it fails for the
+    // right reason and reports the wrong one. These are the two shapes a real
+    // leak would take: the answer stored as a JSON value under an obvious name,
+    // or as a quoted string. Both are long enough to be unambiguous and both
+    // cannot be produced by chance from base64 or from a user id.
+    //
+    // Note also that SQLite stores integers as binary varints, so a plaintext
+    // INTEGER column would not be greppable as ASCII at all. A raw byte search
+    // is a weak instrument here; the CANARY above is the claim that carries
+    // weight, and the structural assertions above carry the rest.
     for (const value of [mine, theirs]) {
-      expect(occurrences(bytes, `"${value}"`)).toBe(0);
+      for (const shape of [`"answer":${value}`, `"answer":"${value}"`, `"answer": ${value}`]) {
+        expect(occurrences(bytes, shape)).toBe(0);
+      }
     }
   });
 

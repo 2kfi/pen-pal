@@ -440,3 +440,166 @@ describe('uploads', () => {
     expect(res.status).toBe(400);
   });
 });
+// ---------------------------------------------------------------------------
+// Who may read a photo (plan step 19)
+//
+// Photos are the one thing in this app that is NOT end-to-end encrypted — they
+// sit on disk in plaintext. That makes the authorisation here the only thing
+// between a photograph and every other account on the instance.
+//
+// The previous version required a valid token and nothing more, so any signed-in
+// user who learned a URL could read anybody's photos. For an app whose entire
+// premise is that it is between two people, that is the product failing, not a
+// missing feature.
+// ---------------------------------------------------------------------------
+describe('photo authorisation', () => {
+  const PNG_1x1 = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+  );
+
+  const upload = async (token) => {
+    const res = await request(app)
+      .post('/api/photos/upload')
+      .set(asUser(token))
+      .attach('photo', PNG_1x1, { filename: 'p.png', contentType: 'image/png' });
+    expect(res.status).toBe(200);
+    return res.body; // { id, url: '/uploads/<uuid>.png', thumbUrl }
+  };
+
+  it('lets the uploader read their own photo', async () => {
+    const a = await signup();
+    const photo = await upload(a.token);
+
+    const res = await request(app).get(photo.url).set(asUser(a.token));
+    expect(res.status).toBe(200);
+    expect(res.headers['content-type']).toMatch(/image\//);
+  });
+
+  it('lets the uploader read their own thumbnail', async () => {
+    const a = await signup();
+    const photo = await upload(a.token);
+
+    const res = await request(app).get(photo.thumbUrl).set(asUser(a.token));
+    expect(res.status).toBe(200);
+  });
+
+  it('refuses a signed-in stranger', async () => {
+    const a = await signup();
+    const stranger = await signup();
+    const photo = await upload(a.token);
+
+    const res = await request(app).get(photo.url).set(asUser(stranger.token));
+    expect(res.status).toBe(404);
+  });
+
+  it('refuses an anonymous request', async () => {
+    const a = await signup();
+    const photo = await upload(a.token);
+
+    const res = await request(app).get(photo.url);
+    expect([401, 403, 404]).toContain(res.status);
+  });
+
+  it('does not confirm that a forbidden photo exists', async () => {
+    // 404 rather than 403, deliberately: a 403 tells an attacker the file is
+    // real, which turns the upload directory into an enumeration oracle. A
+    // stranger and a nonexistent filename must be indistinguishable.
+    const a = await signup();
+    const stranger = await signup();
+    const photo = await upload(a.token);
+
+    const forbidden = await request(app).get(photo.url).set(asUser(stranger.token));
+    const missing = await request(app)
+      .get('/uploads/00000000-0000-4000-8000-000000000000.png')
+      .set(asUser(stranger.token));
+
+    expect(forbidden.status).toBe(missing.status);
+    expect(forbidden.body).toEqual(missing.body);
+  });
+
+  it('refuses the pen pal until the photo is attached to a letter', async () => {
+    const { a, b } = await pairedCouple();
+    const photo = await upload(a.token);
+
+    // Paired is not the same as attached. Nothing sets photos.letter_id yet, so
+    // this must still be refused — sharing is impossible until it is, which is
+    // the safe direction to be wrong in.
+    const before = await request(app).get(photo.url).set(asUser(b.token));
+    expect(before.status).toBe(404);
+
+    const { getDb } = await import('../server/db.js');
+    const sent = await request(app)
+      .post('/api/letters/send')
+      .set(asUser(a.token))
+      .send({
+        recipientId: b.user.id,
+        encryptedContent: '{"v":2,"ct":"AAAA"}',
+        encryptedMetadata: '{"v":2,"ct":"BBBB"}',
+        idempotencyKey: `photo-auth-${Date.now()}`,
+      });
+    expect(sent.status).toBe(200);
+    expect(sent.body.success).toBe(true);
+
+    getDb()
+      .prepare('UPDATE photos SET letter_id = ? WHERE id = ?')
+      .run(sent.body.letter.id, photo.id);
+
+    const after = await request(app).get(photo.url).set(asUser(b.token));
+    expect(after.status).toBe(200);
+    expect(after.headers['content-type']).toMatch(/image\//);
+  });
+
+  it('still refuses a stranger after the photo is attached', async () => {
+    const { a } = await pairedCouple();
+    const stranger = await signup();
+    const photo = await upload(a.token);
+
+    const { getDb } = await import('../server/db.js');
+    getDb()
+      .prepare('UPDATE photos SET letter_id = (SELECT id FROM letters LIMIT 1) WHERE id = ?')
+      .run(photo.id);
+
+    const res = await request(app).get(photo.url).set(asUser(stranger.token));
+    expect(res.status).toBe(404);
+  });
+
+  it('serves nothing but the pipeline output', async () => {
+    const a = await signup();
+    const photo = await upload(a.token);
+
+    const res = await request(app).get(photo.url).set(asUser(a.token));
+    expect(res.headers['x-content-type-options']).toBe('nosniff');
+    // Directory listings were never available and must not become available.
+    const dir = await request(app).get('/uploads/').set(asUser(a.token));
+    expect(dir.status).toBeGreaterThanOrEqual(400);
+  });
+
+  // A note on what these assert, because the obvious assertion is the wrong one.
+  // `/uploads/../../server/index.js` does NOT return the server source — the
+  // client normalises the `..` away, the path becomes `/server/index.js`, and
+  // that matches the SPA fallback, which answers 200 with the CLIENT's
+  // index.html. So "status >= 400" fails against a perfectly safe response, and
+  // asserting on status would have pushed someone toward making the fallback
+  // return 404 for paths it never had any business serving in the first place.
+  //
+  // What actually matters is that no response body ever contains a file from
+  // outside the upload directory. That is asserted directly.
+  const SOURCE_MARKERS = /require\(|JWT_SECRET|express\.Router|runMigrations|penpal-e2e-only/;
+
+  it.each([
+    ['dot-dot traversal', '/uploads/../../server/index.js'],
+    ['encoded traversal', '/uploads/..%2f..%2fserver%2findex.js'],
+    ['double-encoded traversal', '/uploads/..%252f..%252fserver/db.js'],
+    ['a non-uuid filename', '/uploads/penpal.db'],
+    ['a nested path', '/uploads/sub/dir/00000000-0000-4000-8000-000000000000.png'],
+    ['a dotfile', '/uploads/.00000000-0000-4000-8000-000000000000.png'],
+    ['an absolute path', '/uploads//etc/passwd'],
+  ])('serves no source file for %s', async (_label, target) => {
+    const a = await signup();
+    const res = await request(app).get(target).set(asUser(a.token));
+    expect(res.text ?? '').not.toMatch(SOURCE_MARKERS);
+    // And it must never be the database either.
+    expect(res.text ?? '').not.toMatch(/SQLite format 3/);
+  });
+});

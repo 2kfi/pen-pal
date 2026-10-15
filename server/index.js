@@ -76,17 +76,13 @@ app.use(requestContext());
 const uploadsDir = path.join(__dirname, '../uploads');
 // 0700: these are plaintext photos and only the app's own process ever reads them.
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true, mode: 0o700 });
-// NOTE: the /uploads static mount is registered further down, *after* auth is
-// defined. v0.0.2 served it world-readable at /uploads/<uuid>, which put every
-// uploaded photo in plaintext on a public URL and contradicted the app's entire
-// E2E promise.
+// The mount that serves these files is registered near the other routers, after
+// auth is defined. v0.0.2 served them world-readable at /uploads/<uuid>, which
+// put every uploaded photo in plaintext on a public URL and contradicted the
+// app's entire E2E promise.
 
-// The upload pipeline lives in server/uploads.js (plan step 21). It sniffs the
-// real magic bytes, caps decoded pixels, re-encodes through sharp (dropping
-// EXIF/GPS/ICC profiles and anything appended to the file), generates a
-// thumbnail, and only then writes to disk. Nothing here trusts
-// `file.mimetype` — that value is the client's own Content-Type header.
-const { photoUpload, processUpload, thumbUrlFor } = require('./uploads');
+// The upload pipeline itself lives in server/uploads.js (plan step 21) and is
+// now required by routes/photos.js, which owns both the upload and the serving.
 
 // Behind a reverse proxy every request arrives with the PROXY's address unless
 // Express is told to trust the forwarding headers. Without this, express-rate-limit
@@ -145,12 +141,17 @@ const letterRoutes = require('./routes/letters');
 const opsRoutes = require('./routes/ops');
 const gameRoutes = require('./routes/games');
 const ritualRoutes = require('./routes/rituals');
+const { uploadRoute, filesRoute } = require('./routes/photos');
 
 app.use('/api', authRoutes());
 app.use('/api/letters', letterRoutes());
 app.use(opsRoutes());
 app.use('/api/games', gameRoutes());
 app.use('/api/rituals', ritualRoutes());
+app.use('/api/photos', uploadRoute({ authenticateToken, perUser, writeMax: WRITE_MAX, uploadsDir, log }));
+// NOT express.static. A static mount cannot ask who is asking, and every file
+// in this directory is somebody's photograph. See routes/photos.js.
+app.use('/uploads', filesRoute({ authenticateToken, uploadsDir, log }));
 
 app.get('/api/me', authenticateToken, (req, res) => {
   const user = getDb().prepare('SELECT id, username, friendly_name, email, pid, public_key as publicKey, encrypted_private_key as encryptedPrivateKey, age, birthday, favorite_food, bio, avatar_url, profile_data FROM users WHERE id = ?').get(req.user.id);
@@ -306,36 +307,6 @@ function pageParams(req) {
  * it arrives. v0.0.2 stored `delivered_at` and never filtered on it, so the
  * "Deliver no earlier than" date was decorative — scheduled mail arrived at once.
  */
-// Everything about this route is delegated to the pipeline in server/uploads.js.
-// The response shape is unchanged (`id`, `url`) plus `thumbUrl`, so the existing
-// client keeps working.
-app.post('/api/photos/upload', authenticateToken, perUser(WRITE_MAX), (req, res) => {
-  photoUpload.single('photo')(req, res, async (err) => {
-    if (err || !req.file) {
-      const status = err instanceof multer.MulterError ? 400 : err?.status || 400;
-      return res.status(status).json({ error: err ? err.message : 'No file uploaded' });
-    }
-    try {
-      const stored = await processUpload(req.file.buffer, uploadsDir);
-      const info = getDb().prepare('INSERT INTO photos (user_id, filename, filepath) VALUES (?, ?, ?)')
-        .run(req.user.id, stored.filename, stored.filepath);
-      res.json({
-        id: info.lastInsertRowid,
-        url: stored.filepath,
-        thumbUrl: stored.thumbFilepath || thumbUrlFor(stored.filepath),
-      });
-    } catch (e) {
-      // Fail closed: a rejected upload never reached the disk, so there is
-      // nothing to clean up here.
-      if (e && e.name === 'UploadRejected') {
-        return res.status(e.status || 400).json({ error: e.message });
-      }
-      log('Photo upload failed', { error: e && e.message });
-      res.status(500).json({ error: 'Upload failed' });
-    }
-  });
-});
-
 app.get('/api/notifications', authenticateToken, (req, res) => {
   const { limit, cursor } = pageParams(req);
   const db = getDb();
@@ -355,21 +326,6 @@ app.put('/api/notifications/read', authenticateToken, (req, res) => {
 // dragged in an unauthenticated image origin that fought our CSP.
 // Encrypted keepsakes attached to letters replace it.
 
-// Uploads are served only to an authenticated request.
-// v0.0.2 mounted this world-readable at /uploads/<uuid>, which put every photo in
-// plaintext on a public URL and quietly contradicted the E2E promise.
-app.use(
-  '/uploads',
-  authenticateToken,
-  express.static(uploadsDir, {
-    // Nothing served from here is user-controlled HTML, and the pipeline
-    // guarantees raster-only output. nosniff plus an explicit index denial keeps
-    // the mount a plain file server.
-    index: false,
-    dotfiles: 'deny',
-    setHeaders: (res) => res.setHeader('X-Content-Type-Options', 'nosniff'),
-  }),
-);
 
 // DB Reset: disabled in production; otherwise requires ADMIN_TOKEN. Never logged.
 app.post('/api/admin/reset-db', authenticateToken, (req, res) => {
