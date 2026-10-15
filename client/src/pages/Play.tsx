@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ChessBoard } from '../components/ChessBoard';
+import PenPalChess from './PenPalChess';
 import {
   LEVEL_LABELS,
   createChessEngine,
@@ -63,11 +64,19 @@ export default function Play() {
         ))}
       </div>
 
-      <div className="row" style={{ marginTop: 'var(--space-3)' }}>
-        <button type="button" onClick={() => setGameId((n) => n + 1)}>
-          New game
-        </button>
-      </div>
+      {/*
+        Remounting a local board is what "New game" means here. In pen-pal mode
+        there is no local board to remount — the position lives on the server and
+        a new game is a request both of you can see — so the button is not drawn
+        rather than drawn and ignored.
+      */}
+      {mode !== 'pen-pal' && (
+        <div className="row" style={{ marginTop: 'var(--space-3)' }}>
+          <button type="button" onClick={() => setGameId((n) => n + 1)}>
+            New game
+          </button>
+        </div>
+      )}
 
       {mode === 'two-player' ? (
         <ChessBoard key={gameId} />
@@ -220,25 +229,14 @@ function EngineGame() {
 }
 
 /**
- * Two people, one board.
+ * Two people, one board, over the wire.
  *
- * Deliberately not faked. The server half of step 26 exists and its tests play a
- * real game with the position sealed in the browser, but this page is not wired
- * to it yet, and a button that says "start a game" and does nothing is worse
- * than saying so.
+ * The page itself is `PenPalChess`: a real game against the store and the
+ * `/api/games` routes, with every move sealed in the browser before it is sent.
+ * It is imported here rather than only by its own route so that Play's pen-pal
+ * mode and the standalone page are the same code — a second copy would drift the
+ * moment one of them was fixed.
  */
 function PenPalGame() {
-  return (
-    <div className="card">
-      <h2>Play your pen pal</h2>
-      <p className="muted">
-        A game between you two: every move is sealed in your browser before it is sent, so neither of
-        you can see a position the other has not sent, and the server stores only ciphertext.
-      </p>
-      <p className="muted">
-        This screen is not connected yet. The rules, the encryption and the server routes are built
-        and tested — what is missing is the page that drives them.
-      </p>
-    </div>
-  );
+  return <PenPalChess embedded />;
 }

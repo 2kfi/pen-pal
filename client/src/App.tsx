@@ -10,6 +10,7 @@ const Compose = lazy(() => import('./pages/Compose'));
 const Reader = lazy(() => import('./pages/Reader'));
 const Pairing = lazy(() => import('./pages/Pairing'));
 const Play = lazy(() => import('./pages/Play'));
+const PenPalChess = lazy(() => import('./pages/PenPalChess'));
 const Settings = lazy(() => import('./pages/Settings'));
 const Rituals = lazy(() => import('./pages/Rituals'));
 const StyleGuide = lazy(() => import('./pages/StyleGuide'));
@@ -106,6 +107,7 @@ export default function App() {
               <Route path="/letters/:id" element={<Reader />} />
               <Route path="/pairing" element={<Pairing />} />
               <Route path="/play" element={<Play />} />
+              <Route path="/chess" element={<PenPalChess />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/rituals" element={<Rituals />} />
               {/* The design gallery is development-only. `import.meta.env.DEV`

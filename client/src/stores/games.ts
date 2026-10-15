@@ -73,6 +73,18 @@ export interface GamesState {
   outcome: () => string;
 }
 
+/**
+ * The partner's name, for a sentence that needs a person in it.
+ *
+ * One definition, used by load() and by acceptUndo(). The second caller used to
+ * pass the literal 'your partner', so accepting a take-back announced "your
+ * partner to move" while the rest of the app had been saying Margot all along.
+ */
+function currentPartnerName(): string {
+  const partner = usePairing.getState().partner;
+  return partner?.friendly_name || partner?.username || 'your partner';
+}
+
 /** Who to address the envelope to. Same shape as the rituals store's. */
 function sealContext(): { senderId: number; partnerId: number; senderPublicKey: JsonWebKey; partnerPublicKey: JsonWebKey; name: string } {
   const me = useAuth.getState().user;
@@ -133,12 +145,11 @@ export const useGames = create<GamesState>((set, get) => ({
     try {
       await usePairing.getState().refresh();
       const me = useAuth.getState().user;
-      const partner = usePairing.getState().partner;
       if (!me) {
         set({ loading: false, session: null, position: null, moves: [] });
         return;
       }
-      const partnerName = partner?.friendly_name || partner?.username || 'your partner';
+      const partnerName = currentPartnerName();
 
       // The archive of finished games is cheap and is what the reconnect view
       // shows underneath the live board.
@@ -303,7 +314,7 @@ export const useGames = create<GamesState>((set, get) => ({
       const { game } = await gamesApi.acceptUndo(session.id, session.version);
       // The board comes from the server's rewound position, not from popping the
       // local list: if the two disagree, the server's sealed state is the record.
-      const adopted = await adopt(game, me.id, 'your partner');
+      const adopted = await adopt(game, me.id, currentPartnerName());
       set({ ...adopted, sending: false });
     } catch (e) {
       set({ sending: false, error: e instanceof Error ? e.message : 'The take-back was not accepted.' });

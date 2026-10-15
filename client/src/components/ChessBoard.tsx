@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react';
 import { createPortal } from 'react-dom';
+import { uciOf } from '../lib/chessGames';
 import {
   GLYPH,
   cloneState,
@@ -76,6 +77,21 @@ const PIECE_WORDS: Record<PieceType, string> = {
 const PROMO_ORDER: Promo[] = ['q', 'r', 'b', 'n'];
 
 const side = (c: Color): string => (c === 'w' ? 'White' : 'Black');
+
+/** Two positions a viewer could not tell apart. Halfmove and fullmove included:
+ *  they decide whether a draw is on, so "same squares" is not the same thing. */
+function samePosition(a: GameState, b: GameState): boolean {
+  if (a.turn !== b.turn || a.halfmove !== b.halfmove || a.fullmove !== b.fullmove) return false;
+  if (a.ep !== b.ep) return false;
+  for (const k of ['wK', 'wQ', 'bK', 'bQ'] as const) {
+    if (a.castling[k] !== b.castling[k]) return false;
+  }
+  return a.board.every((piece, i) => {
+    const other = b.board[i];
+    if (!piece || !other) return piece === other;
+    return piece.t === other.t && piece.c === other.c;
+  });
+}
 
 /**
  * U+FE0E (variation selector-15) pins the glyph to text presentation. Without
@@ -201,6 +217,18 @@ interface DragState {
   over: number | null;
 }
 
+/**
+ * One sealed ply, reduced to what the board needs to rebuild itself.
+ *
+ * `uci` is `chessGames.uciOf`'s string: the from index, the to index, and a
+ * promotion letter. It is deliberately not re-derived here, because that is the
+ * one function that defines the convention and a second implementation of it
+ * would be a second thing to get wrong.
+ */
+export interface RecordedMove {
+  uci: string;
+}
+
 export interface ChessBoardProps {
   /**
    * Restrict play to one side. Omit it for two players on one board. When set,
@@ -231,6 +259,23 @@ export interface ChessBoardProps {
    * the second one.
    */
   engineMove?: { move: Move; seq: number } | null;
+  /**
+   * A game that already happened elsewhere, for the board two people play over
+   * the wire (plan step 26).
+   *
+   * The board above is built to be played: it accumulates moves as they are
+   * made. A board fed by a partner's letters cannot work that way, because the
+   * position lives in a sealed envelope on the server and the page that draws it
+   * may not have existed when the moves were played. So the board takes the
+   * record and replays it, which means what it draws is derived from the same
+   * list the server holds rather than from whatever this tab happened to see.
+   *
+   * `nonce` is the trigger, not the array identity: the array is replaced on
+   * every re-render of a store that adopts a session, and comparing it would
+   * replay the whole game constantly. Bump it when the record is replaced — an
+   * opponent's move, an accepted take-back, a refresh.
+   */
+  record?: { moves: readonly RecordedMove[]; nonce: number } | null;
 }
 
 export function ChessBoard({
@@ -238,6 +283,7 @@ export function ChessBoard({
   onMove,
   status: statusOverride,
   engineMove,
+  record,
 }: ChessBoardProps = {}) {
   const [game, setGame] = useState<GameState>(initialState);
   const [played, setPlayed] = useState<Move[]>([]);
@@ -556,6 +602,7 @@ export function ChessBoard({
   };
 
   const draggedPiece = ghost ? game.board[ghost.from] : null;
+  const recorded = record !== undefined && record !== null;
 
   /**
    * Play an injected move. Recomputed against `legal` rather than trusted: the
@@ -579,6 +626,53 @@ export function ChessBoard({
     // `commit` and `legal` change identity every render; the sequence guard
     // above is what makes re-running this a no-op rather than a second move.
   }, [engineMove, legal, commit]);
+
+  /**
+   * Draw the recorded game.
+   *
+   * A move that will not replay leaves the board exactly as it was and says so.
+   * Partly applying a list — three moves of six and then silence — would be a
+   * board showing a game nobody played.
+   */
+  const lastRecord = useRef<number | null>(null);
+  useEffect(() => {
+    if (!record || record.nonce === lastRecord.current) return;
+    // The first record this board has seen is not an echo of anything, so it is
+    // always drawn and always said: before it, the status line still holds the
+    // two-players-on-one-board text this board was mounted with.
+    const first = lastRecord.current === null;
+    lastRecord.current = record.nonce;
+
+    const replay = initialState();
+    const history: Stack = [];
+    const applied: Move[] = [];
+
+    for (const sealed of record.moves) {
+      const found = legalMoves(replay).find((m) => uciOf(m) === sealed.uci);
+      if (!found) {
+        setStatus('That game could not be rebuilt from its own record, so the board was left alone.');
+        return;
+      }
+      makeMove(replay, found, history);
+      applied.push(found);
+    }
+
+    // The move you just played is already on the board by the time the record
+    // catches up. Redrawing it silently would be right, and saying so would be
+    // a second announcement of a turn the player just watched themselves make.
+    if (!first && samePosition(replay, game)) return;
+
+    setGame(replay);
+    setPlayed(applied);
+    setSelected(null);
+    setPromo(null);
+    if (applied.length > 0) setCursor(applied[applied.length - 1].to);
+    setStatus(
+      gameResult(cloneState(replay)) === 'playing'
+        ? `${side(replay.turn)} to move.`
+        : `${side(replay.turn)} has no move.`,
+    );
+  }, [record, game]);
 
   return (
     <div className="cb">
@@ -699,10 +793,22 @@ export function ChessBoard({
         </div>
 
         <div className="cb-controls">
-          <button type="button" className="cb-btn" onClick={reset}>New game</button>
-          <button type="button" className="cb-btn" onClick={undo} disabled={played.length === 0}>
-            Take back
-          </button>
+          {/*
+            A recorded game has no local New game and no local Take back. Both
+            would edit a board that the server holds a different copy of: the
+            local undo would rewind the squares without asking the partner, and
+            the next move sealed from them would be a move the record does not
+            contain. The over-the-wire board takes its take-back from the page,
+            where the other player has to agree to it first.
+          */}
+          {!recorded && (
+            <>
+              <button type="button" className="cb-btn" onClick={reset}>New game</button>
+              <button type="button" className="cb-btn" onClick={undo} disabled={played.length === 0}>
+                Take back
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="cb-btn"

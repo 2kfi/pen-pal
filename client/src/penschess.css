@@ -1,0 +1,313 @@
+/**
+ * Chess between two people who write to each other (plan step 26).
+ *
+ * Everything here is `pp-` prefixed and every value is a token from tokens.css.
+ * No raw colour, no new radius, no invented spacing. Self-contained: this file
+ * neither depends on index.css nor is depended on by it, the same contract
+ * chess.css keeps.
+ *
+ * ## The one idea
+ *
+ * A game in progress is a **sheet on a table**: the board is the object, and
+ * everything that is merely information about it sits beside it on the paper,
+ * separated by hairlines rather than boxed into cards of its own. The rule that
+ * does most of the work here is the one the archive already follows — no card
+ * grid, one radius, wax for the single primary action on the screen.
+ *
+ * Two zones above 1024px, one column below it. The board keeps the sizing rules
+ * from chess.css (it bleeds into main's gutter under 640px so a 375px screen
+ * gets 44px-plus squares); this file never sizes the board itself.
+ *
+ * Motion is limited to one transition on a button border, answered by a click.
+ * Nothing on this page animates because time passed.
+ */
+
+.pp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/*
+ * The one place this app leaves the reading measure.
+ *
+ * `main` is capped at 68ch, which is right for a letter and wrong for a board:
+ * a 544px board and a rail beside it need about 900px, and inside 565px the
+ * board gets squeezed until its rows and columns stop agreeing with each other.
+ * Above 1024px this page therefore breaks out to the window and centres itself
+ * again, which is the two-zone desktop layout from DESIGN §8 with the same
+ * gutter it has everywhere else.
+ */
+@media (min-width: 1024px) {
+  /*
+    Only while there is a board on the page. An empty state, a locked archive
+    and an invitation are all reading, and they stay in the measure with
+    everything else.
+  */
+  .pp:has(.pp-table) {
+    margin-inline: calc(50% - 50vw);
+    /* Full bleed, then padded back to the window's own gutter — or wider, so the
+       two zones stay centred on a big screen instead of clinging to the left. */
+    padding-inline: max(var(--space-5), calc((100vw - 64rem) / 2));
+  }
+}
+
+.pp-heading {
+  margin: 0;
+}
+
+/* The one sentence that says what this is. Same job as the rituals lede: no
+   second paragraph explaining the encryption, because that is what the lede is
+   for. */
+.pp-lede {
+  margin: 0;
+  max-width: var(--measure);
+  font-size: var(--type-base);
+  color: var(--muted);
+}
+
+.pp-note {
+  margin: 0;
+  max-width: var(--measure);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * states that stop the board being drawn                               *
+ * ------------------------------------------------------------------ */
+
+/* A page that cannot open the position says so on the paper. No board, no
+   skeleton, no spinner shaped like a chessboard: a loading state that looks
+   like the thing being loaded is how an empty position gets believed. */
+.pp-stop {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--rule);
+  max-width: var(--measure);
+}
+
+.pp-stop h3 {
+  margin-top: 0;
+}
+
+.pp-stop p {
+  margin: 0 0 var(--space-3);
+}
+
+.pp-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The one accent on the screen. Wax marks the action you would take if you did
+   nothing else; everything else is a plain control. */
+.pp-primary {
+  border-color: var(--wax);
+  color: var(--wax);
+}
+
+.pp-primary:hover:not(:disabled) {
+  background: var(--wax-wash);
+  color: var(--wax-bright);
+  border-color: var(--wax-bright);
+}
+
+/* ------------------------------------------------------------------ *
+ * the table: board beside the paper                                   *
+ * ------------------------------------------------------------------ */
+
+.pp-table {
+  display: grid;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.pp-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.pp-side > * {
+  margin: 0;
+}
+
+/* Above 1024px the page is the two zones the archive uses: the object, and the
+   reading pane beside it. Below that they stack, and the side comes after the
+   board because the board is the reason to be here.
+
+   The board's floor is 22rem: chess.css pins every row at the 44px target
+   minimum, so anything narrower than eight of those stops being a board. */
+@media (min-width: 1024px) {
+  .pp-table {
+    grid-template-columns: minmax(22rem, 34rem) minmax(13rem, 20rem);
+    justify-content: center;
+    gap: var(--space-6);
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * the state of the game — the live region                              *
+ * ------------------------------------------------------------------ */
+
+/* Set at the letter size in the reading face, because this is the sentence
+   somebody reads while deciding what to do next. It is a state, not a badge. */
+.pp-state {
+  margin: 0 0 var(--space-4);
+  max-width: var(--measure);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+  color: var(--text);
+}
+
+.pp-state--over {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+/* Waiting reads as waiting. Teal means transit in this system, and a move that
+   has not been made is not in transit — so this is ink, not a colour. */
+.pp-clock {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pp-error {
+  margin: 0 0 var(--space-4);
+  padding-left: var(--space-3);
+  border-left: 2px solid var(--danger);
+  font-size: var(--type-sm);
+  color: var(--text);
+}
+
+/* ------------------------------------------------------------------ *
+ * offers: a question with its answer next to it                        *
+ * ------------------------------------------------------------------ */
+
+/* Not a card. A hairline above and the paragraph beside it is enough: an offer
+   is a line in a letter, not a dialog. */
+.pp-offer {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+.pp-offer-text {
+  margin: 0;
+  font-size: var(--type-base);
+}
+
+.pp-offer .pp-choices,
+.pp-confirm .pp-choices {
+  margin-top: var(--space-3);
+}
+
+.pp-confirm {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+}
+
+/* ------------------------------------------------------------------ *
+ * actions                                                             *
+ * ------------------------------------------------------------------ */
+
+.pp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Where the two of you stand, in the postmark register: it is data, so it is
+   the only thing on the page allowed to be uppercase. */
+.pp-foot {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--rule);
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------------ *
+ * the archive of games                                                *
+ * ------------------------------------------------------------------ */
+
+.pp-games {
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--rule);
+}
+
+.pp-games h3 {
+  margin-top: 0;
+}
+
+/* Rows on a spine, the way letters sit in the archive: one hairline running
+   down the left, each game a node on it. Not a table, and not cards. */
+.pp-list {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--space-4);
+}
+
+.pp-list::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: var(--space-2);
+  bottom: var(--space-2);
+  width: 1px;
+  background: var(--rule);
+}
+
+.pp-game {
+  position: relative;
+  padding: var(--space-3) 0;
+}
+
+.pp-game + .pp-game {
+  border-top: 1px solid var(--rule);
+}
+
+/* The node itself. A 5px ink square, not a dot: at 1px it disappears at small
+   sizes and a border-radius blob is the one shape this system does not use. */
+.pp-game::before {
+  content: '';
+  position: absolute;
+  left: calc(-1 * var(--space-4));
+  top: calc(var(--space-3) + 0.45em);
+  width: 5px;
+  height: 5px;
+  background: var(--text);
+}
+
+.pp-game-postmark {
+  margin: 0;
+  font-family: var(--font-postmark);
+  font-size: var(--type-xs);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pp-game-outcome {
+  margin: 0;
+  font-size: var(--type-base);
+}
+
+/* Nothing here moves unless the reader pressed something: the only transition
+   in the file is a border answering a hover, and it collapses entirely under
+   prefers-reduced-motion (DESIGN §6). */
+@media (prefers-reduced-motion: reduce) {
+  .pp button {
+    transition: none;
+  }
+}

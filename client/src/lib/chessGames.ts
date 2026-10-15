@@ -116,7 +116,10 @@ export interface SealedMove {
   ply: number;
   color: Color;
   san: string;
-  /** "e2e4", optionally with a promotion suffix: "e7e8q". */
+  /**
+   * The move key produced by `uciOf`: decimal from and to indices, delimited.
+   * Not algebraic UCI. See `uciOf`.
+   */
   uci: string;
   at: string;
 }
@@ -145,8 +148,18 @@ export interface SealedGame {
   result: GameStatus;
 }
 
+/**
+ * A move key for the sealed record: the sender's own square indices.
+ *
+ * NOT algebraic UCI. Despite what the old name and comment claimed, this is
+ * `${from}${to}${promotion}` with decimal indices, and concatenating two
+ * variable-width numbers is ambiguous: from=1,to=10 and from=11,to=0 both
+ * produce "110". Nothing shipped depends on the format, both peers compute it
+ * identically, and it only ever has to survive a round trip through the server,
+ * so the fix is a delimiter rather than a migration.
+ */
 export function uciOf(move: Move): string {
-  return `${move.from}${move.to}${move.promotion ?? ''}`;
+  return `${move.from}:${move.to}:${move.promotion ?? ''}`;
 }
 
 /** A fresh position, straight from the rules engine. */
@@ -225,9 +238,7 @@ export function verifySealedGame(payload: SealedGame): string | null {
   const history: UndoStack = [];
   for (const sealed of payload.moves) {
     const legal = legalMoves(replay);
-    const found = legal.find(
-      (m) => uciOf(m) === sealed.uci || `${m.from}${m.to}` === sealed.uci.slice(0, 4),
-    );
+    const found = legal.find((m) => uciOf(m) === sealed.uci);
     if (!found) {
       return `Move ${sealed.ply} (${sealed.san}) is not legal in the position before it.`;
     }
@@ -356,9 +367,9 @@ export function describeOutcome(session: GameSession, viewerId: number, partnerN
 
   switch (session.status) {
     case 'checkmate':
-      return iWon ? 'Checkmate — you win.' : iLost ? `Checkmate — ${partnerName} wins.` : 'Checkmate — drawn.';
+      return iWon ? 'Checkmate. You win.' : iLost ? `Checkmate. ${partnerName} wins.` : 'Checkmate. Drawn.';
     case 'stalemate':
-      return 'Stalemate — a draw.';
+      return 'Stalemate. A draw.';
     case 'draw':
       return 'Agreed draw.';
     case 'resigned':
