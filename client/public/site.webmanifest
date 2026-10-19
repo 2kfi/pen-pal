@@ -1,0 +1,61 @@
+{
+  "name": "PenPal",
+  "short_name": "PenPal",
+  "description": "A letter takes time. That is the feature.",
+  "start_url": "/letters",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#0a0a0c",
+  "theme_color": "#0a0a0c",
+  "categories": ["social", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any"
+    },
+    {
+      "src": "/favicon-16x16.png",
+      "type": "image/png",
+      "sizes": "16x16"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "type": "image/png",
+      "sizes": "32x32"
+    },
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Write a letter",
+      "short_name": "Write",
+      "url": "/letters/new",
+      "icons": [{ "src": "/favicon-32x32.png", "type": "image/png", "sizes": "32x32" }]
+    },
+    {
+      "name": "Your archive",
+      "short_name": "Archive",
+      "url": "/letters",
+      "icons": [{ "src": "/favicon-32x32.png", "type": "image/png", "sizes": "32x32" }]
+    }
+  ]
+}

@@ -33,7 +33,7 @@ The current build fails these. They are binding.
 | ALL-CAPS eyebrow labels above every heading | Postmarks are the *only* uppercase, and they carry real data (date, distance). |
 | `A · B · C` middle-dot meta strings | Real content: "sent 14 Mar · 2,140 km". Dots separate facts, not decorate. |
 | "→" appended to every link and button | No arrow spam. Buttons say the action: **"Seal and send"**. |
-| Tinted near-black `#0c0d0f` standing in for black | Ink is genuinely dark; paper is genuinely light. We do not fake paper with dark grey. |
+| Tinted near-black `#0c0d0f`, which v0.0.2 shipped, standing in for black | Ink is genuinely dark; paper is genuinely light. We do not fake paper with dark grey. |
 | Fade-and-slide-up on every section | One orchestrated moment. Motion answers *actions*, never decorates. |
 
 ---
@@ -78,12 +78,13 @@ Light-first on paper, dark as ink. Both themes are authored, not derived.
 | `--ink` | `#0a0a0c` | Page ground. Near-black, honestly dark. |
 | `--paper` | `#14161a` | Raised surface. |
 | `--paper-2` | `#1c1f25` | Input wells. |
-| `--rule` | `#2a2f38` | Hairlines. |
+| `--rule` | `#363c47` | Hairlines. Decorative only. |
+| `--rule-strong` | `#666f7e` | Anything interactive. Clears WCAG 2.2 SC 1.4.11 at 3:1 on `--paper-2`, the lightest dark surface. |
 | `--wax` | `#e8a020` | **The seal.** One accent, used sparingly. |
 | `--wax-bright` | `#f5c048` | Wax on hover/active. |
 | `--in-transit` | `#2ec4b6` | Teal — only ever means "travelling". |
 | `--text` | `#e8e4dc` | Warm off-white on cool ground. |
-| `--muted` | `#8b8578` | Warm grey. |
+| `--muted` | `#918b7f` | Warm grey. The lowest permitted token: 4.88:1 on `--paper-2`. The old `#8b8578` measured 4.4997:1 there and failed. |
 
 ### Light — "the letter on the table"
 | Token | Value | Role |
@@ -91,9 +92,10 @@ Light-first on paper, dark as ink. Both themes are authored, not derived.
 | `--ink` | `#f4f1ea` | Paper ground. |
 | `--paper` | `#fbf9f4` | Raised surface. |
 | `--paper-2` | `#ffffff` | Input wells. |
-| `--rule` | `#dcd6c8` | Hairlines. |
-| `--wax` | `#b45309` | **Not `#7cb342`.** V0.0.2's green accent failed AA and was patched with `--amber-text`. Fixed at the source. |
-| `--wax-bright` | `#92400e` | |
+| `--rule` | `#cfc6b2` | Hairlines. Decorative only. |
+| `--rule-strong` | `#98896a` | Anything interactive. Clears SC 1.4.11 at 3:1 on `--paper-2`. |
+| `--wax` | `#a8490a` | **Not `#b45309`** (measured 4.45:1 on `--ink`) and **not `#7cb342`**, which failed worse. V0.0.2 patched an AA failure with `--amber-text`, a second accent used only for text. Fixed at the source instead. |
+| `--wax-bright` | `#7c3007` | |
 | `--in-transit` | `#0f766e` | |
 | `--text` | `#1f1d1a` | |
 | `--muted` | `#6b665c` | |

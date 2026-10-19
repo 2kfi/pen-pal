@@ -7,7 +7,7 @@
 
 ## The product thesis
 
-**Two people, one sealed channel, slow on purpose.**
+**A letter takes time. That is the feature.**
 
 PenPal is a self-hosted, end-to-end encrypted correspondence app. You pair with
 exactly one person and exchange letters that cannot be edited after sending and
@@ -27,8 +27,8 @@ work — not a task, not a commit.
 
 | Status | Count | Meaning |
 |---|---|---|
-| **Done** | 29 | Implemented and verified |
-| **Partial** | 1 | Shipped, but the step as written is not complete |
+| **Done** | 30 | Implemented and verified |
+| **Partial** | 0 | Shipped, but the step as written is not complete |
 | **Not started** | 0 | Nothing exists yet |
 
 "Verified" means: a test asserts it, or a browser drove it. Not "it compiles".
@@ -88,7 +88,7 @@ The app could not be logged into. This phase made it usable.
 |---|---|---|
 | 24 | ✅ | Full rules engine. **perft: startpos exact to depth 4 (197281), Positions 3/4/5 exact** |
 | 25 | ✅ | Iterative deepening in a Web Worker, 5 levels, PSTs, transposition table, cooperative cancel. **~30–50k nodes/sec** — slow, because every node is an await. `a3` as its best first move at depth 12 is not explained yet |
-| 26 | 🔶 | Game sessions exist server **and** client side, moves sealed E2E, turn enforced server-side, take-back by mutual acceptance. **No page drives `useGames` — `/play`'s pen-pal mode says so rather than faking it** |
+| 26 | ✅ | Two people, one board, over the wire. Moves sealed client-side and relayed by the server, turn enforced server-side, resign / draw by agreement / take-back, move list, board persistence, **PGN export**. Verified in a browser with two accounts: the move persists, the partner sees it, both survive a reload |
 | 27 | ✅ | Daily shared puzzle (deterministic from pair id + date, so neither side learns the other's answer first), letter streak, anniversary. **Answers and streak state are encrypted at rest**; the test reads the db, `-wal` and `-shm` |
 | 28 | ✅ | Promotion picker, drag **and** click, last-move highlight, captured pieces, move list, coordinates, sound off by default |
 
@@ -108,8 +108,8 @@ These surfaced during the work and are tracked here so they don't get lost.
 | | |
 |---|---|
 | **Photos unencrypted at rest** | Letter bodies are encrypted. **Attachments are not** — they sit behind an authenticated route, not cryptography. Stated in README, SELF-HOSTING and HANDOFF |
-| **Kiwipete perft short** | Depth 2 is 1 node short, depth 3 is 51 short. Not root-caused. Asserted in the test name so it stays visible |
-| **Not installable** | No manifest, no service worker, no offline. A URL in a browser |
+| **Not offline** | There is now a manifest and real app icons, so it installs. **No service worker**, so it still needs a network to open. A URL in a browser that will not work if you are on a train |
+| **Kiwipete perft** | Still 1 short at depth 2, 51 short at depth 3. Unrooted; not fixed, deliberately |
 | **Rate limiter keyed on proxy IP** | `trust proxy` was never set, so behind Caddy/nginx one person could lock out their pen pal. Fixed |
 | **Engine strength** | Depth 12 in 15s is fine for `casual`/`club`, marginal for `tough`. Do not offer `strong` to a competent player until the `a3` opening is explained |
 | **`/healthz` 503s for 5s after boot** | Deliberate warmup grace. CI polls for 30s. Set `HEALTHZ_BOOT_GRACE_MS=0` if your orchestrator gives up faster |
@@ -121,7 +121,7 @@ These surfaced during the work and are tracked here so they don't get lost.
 Every one of these must stay green.
 
 ```bash
-npm run design:check                      # 32 contrast pairs
+npm run design:check                      # 32 contrast pairs + the docs colour gate
 npm run lint
 npm test                                  # 245 server tests
 npm --prefix client test                  # 50 crypto, perft, session

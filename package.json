@@ -7,7 +7,7 @@
     "start": "node server/index.js",
     "dev": "node server/index.js",
     "lint": "node --check server/index.js && node --check server/db.js",
-    "design:check": "node tools/check-contrast.mjs",
+    "design:check": "node tools/check-contrast.mjs && node tools/check-docs.mjs",
     "test": "vitest run",
     "backup": "bash scripts/backup.sh",
     "backup:list": "node scripts/ops-db.js list",
@@ -16,7 +16,8 @@
     "migrate:status": "node scripts/migrate-status.js",
     "e2e": "python3 tests/e2e/app.spec.py",
     "e2e:setup": "python3 -m pip install playwright && python3 -m playwright install --with-deps chromium",
-    "build": "node --check server/index.js && node --check server/db.js"
+    "build": "node --check server/index.js && node --check server/db.js",
+    "brand:build": "node tools/build-brand.mjs && python3 tools/build-og.py"
   },
   "keywords": [
     "letters",
