@@ -78,6 +78,18 @@ Known gaps, stated plainly:
   Unrooted, and tracked rather than hidden.
 - Notifications are poll-only. No push, no offline queue, no SSE.
 
+## Run the published image
+
+```bash
+docker pull ghcr.io/2kfi/pen-pal:latest
+```
+
+Public registry, no login. Pin `2.0.0` rather than `latest` if you would rather
+not have the version move under you. **[docs/SELF-HOSTING.md](docs/SELF-HOSTING.md)**
+for TLS, backups and finding the rest.
+
+---
+
 ## Requirements
 
 Browsers only expose `crypto.subtle` in a **secure context**. Serve this over
@@ -96,7 +108,7 @@ penpal.example.com {
 ```bash
 cp .env.example .env
 sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 32)|" .env
-docker compose up -d --build
+docker compose up -d          # or: docker compose up -d --build to build locally
 ```
 
 Then open `http://localhost:3000`, create an account, and read

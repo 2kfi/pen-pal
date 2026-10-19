@@ -13,10 +13,46 @@ git clone https://github.com/2kfi/pen-pal.git
 cd pen-pal
 cp .env.example .env
 sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 32)|" .env
-docker compose up -d --build
+docker compose up -d
 ```
 
 That runs it on port 3000. But **do not expose it over plain HTTP** — see next.
+
+### Or skip the build entirely
+
+A published image is on GitHub Container Registry. No clone, no Node, no
+compiling native modules on your machine:
+
+```bash
+mkdir penpal && cd penpal
+curl -fsSLO https://raw.githubusercontent.com/2kfi/pen-pal/main/docker-compose.yml
+curl -fsSLO https://raw.githubusercontent.com/2kfi/pen-pal/main/.env.example
+cp .env.example .env
+sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$(openssl rand -base64 32)|" .env
+docker compose up -d
+```
+
+```bash
+docker pull ghcr.io/2kfi/pen-pal:latest
+```
+
+The registry is public, so no login is needed to pull.
+
+**Pin a version instead of `latest`.** `latest` moves, so two people installing on
+the same day can end up running different code, and the one with the bug is
+yours. A tag is immutable:
+
+```bash
+# in docker-compose.yml
+image: ghcr.io/2kfi/pen-pal:2.0.0
+```
+
+`2.0.0` is the release, `2.0` tracks patch fixes, and
+`sha-11cbd562596721060fc9f72a2df3ed565da6d343` is the exact commit. When
+something breaks, the sha is what tells you which build to roll back to.
+
+Building from source (`docker compose up -d --build`) still works and is worth
+doing if you intend to change anything.
 
 ---
 
