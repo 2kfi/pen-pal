@@ -46,6 +46,17 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json ./
 
 COPY server/ ./server/
+
+# The ops scripts, so a backup is possible from inside the container.
+#
+# docs/SELF-HOSTING.md tells an operator to back the database up, and the recipe
+# it gave was `sqlite3 /app/data/penpal.db ".backup ..."` through `docker exec`.
+# This runtime stage installs nothing, so sqlite3 is not in the image and that
+# command could never have worked: the one documented way to save your letters
+# was broken in the only place the image runs. These scripts are pure Node over
+# better-sqlite3, which is already in node_modules above, so copying them in
+# costs a few KB and makes `npm run backup` work inside the container.
+COPY scripts/ ./scripts/
 # NOTE: public/ is intentionally NOT copied. v0.0.2 served a legacy vanilla app
 # here alongside React, so `/` and `/letters` were two different applications on
 # one origin. The legacy app has since been deleted from the repo entirely.

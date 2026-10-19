@@ -12,6 +12,9 @@ client/node_modules
 # Host runtime state
 data
 uploads
+# Where scripts/backup.sh writes by default. Host state, and it can be large:
+# uploading a developer's local backups to the builder is slow and pointless.
+backups
 
 # Scratch
 tmp

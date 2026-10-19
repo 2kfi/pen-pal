@@ -109,8 +109,10 @@ Both are bind-mounted in `docker-compose.yml`.
 
 ```bash
 # Consistent copy — safe while the server is running
-docker compose exec pen-pal sh -c 'sqlite3 /app/data/penpal.db ".backup /app/data/backup.db"'
-docker cp pen-pal:/app/data/backup.db ./penpal-$(date +%F).db
+# Uses SQLite's online .backup, not `cp`. Copying a live WAL database while the
+# server is writing to it produces a file that may be missing recent letters.
+docker compose exec pen-pal npm run backup
+docker cp pen-pal:/app/backups ./penpal-$(date +%F)
 ```
 
 Then copy `uploads/` and the database somewhere off the machine.
