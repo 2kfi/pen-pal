@@ -25,7 +25,7 @@ jobs:
     environment: production
     steps:
       - name: Deploy with health check and rollback
-        uses: appleboy/ssh-action@v1.2.2
+        uses: appleboy/ssh-action@v1.2.5
         env:
           IMAGE_TAG: ghcr.io/${{ github.repository }}:${{ github.sha }}
         with:
