@@ -107,6 +107,7 @@ These surfaced during the work and are tracked here so they don't get lost.
 
 | | |
 |---|---|
+| **UI rebuild 2026, phases 1-3 done** | The 2026 direction (`DESIGN-UPDATED.md`, referenced by `docs/DESIGN.md` §4) is adopted: postal-yellow palette solved for AA, Inter for the chrome (Literata stays for reading), 48px header + correspondence rail shell, letter-card grid with token-only stamp art, compose as a sheet. **Rituals, Settings and the chess pages are token-clean but not redesigned to the new direction yet — that is phase 4** |
 | **Photos unencrypted at rest** | Letter bodies are encrypted. **Attachments are not** — they sit behind an authenticated route, not cryptography. Stated in README, SELF-HOSTING and HANDOFF |
 | **Not offline** | There is now a manifest and real app icons, so it installs. **No service worker**, so it still needs a network to open. A URL in a browser that will not work if you are on a train |
 | **Kiwipete perft** | Still 1 short at depth 2, 51 short at depth 3. Unrooted; not fixed, deliberately |
