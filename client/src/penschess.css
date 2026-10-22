@@ -167,8 +167,8 @@
 
 .pp-error {
   margin: 0 0 var(--space-4);
-  padding-left: var(--space-3);
-  border-left: 2px solid var(--danger);
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--danger);
   font-size: var(--type-sm);
   color: var(--text);
 }

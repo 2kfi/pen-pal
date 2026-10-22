@@ -73,7 +73,7 @@
   align-items: center;
   min-width: 2.25rem;
   padding: var(--space-4) 0;
-  border-right: 1px dashed var(--rule-strong);
+  border-inline-end: 1px dashed var(--rule-strong);
   background: var(--paper-2);
   writing-mode: vertical-rl;
   text-orientation: mixed;

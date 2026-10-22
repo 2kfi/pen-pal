@@ -122,7 +122,10 @@ export default function Reader() {
       {state.kind === 'opened' && (
         <>
           {/* Sanitised by renderLetterBody. */}
-          <div className="reader" dangerouslySetInnerHTML={{ __html: state.html }} />
+          {/* dir="auto": the direction obeys the letter's own first strong
+              character, so a letter written in Arabic or Hebrew reads right
+              to left inside a left-to-right interface. */}
+          <div className="reader" dir="auto" dangerouslySetInnerHTML={{ __html: state.html }} />
           <span className="seal" aria-hidden />
         </>
       )}

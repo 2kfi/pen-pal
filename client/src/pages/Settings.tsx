@@ -57,6 +57,7 @@ export default function Settings() {
             <label htmlFor="display-name">Display name</label>
             <input
               id="display-name"
+              dir="auto"
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={64}
@@ -65,7 +66,7 @@ export default function Settings() {
         </div>
         <div className="field">
           <label htmlFor="bio">About you</label>
-          <textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={256} />
+          <textarea id="bio" dir="auto" value={bio} onChange={(e) => setBio(e.target.value)} rows={3} maxLength={256} />
         </div>
         <button className="primary" type="button" onClick={() => void save()}>
           Save

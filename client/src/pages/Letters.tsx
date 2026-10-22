@@ -137,12 +137,12 @@ function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
 
       {state?.kind === 'transit' && (
         <>
-          <p className="letter-excerpt">Still travelling.</p>
+          <p className="letter-excerpt" dir="auto">Still travelling.</p>
           <p className="muted">Arrives {state.arrivesAt}</p>
         </>
       )}
 
-      {state?.kind === 'text' && <p className="letter-excerpt">{state.excerpt}</p>}
+      {state?.kind === 'text' && <p className="letter-excerpt" dir="auto">{state.excerpt}</p>}
 
       {state?.kind === 'sealed' && (
         <>

@@ -206,8 +206,11 @@ export default function Compose() {
       <form onSubmit={submit}>
         <div className="field">
           <label htmlFor="letter-body">Letter</label>
+          {/* dir="auto": direction follows the writer's first strong
+              character, matching what the reader will resolve. */}
           <textarea
             id="letter-body"
+            dir="auto"
             value={body}
             onChange={(e) => setBody(e.target.value)}
             placeholder="Dear friend…"
@@ -256,7 +259,7 @@ export default function Compose() {
           <summary>Preview</summary>
           {/* Sanitised: marked() output is passed through DOMPurify before it is
               ever handed to dangerouslySetInnerHTML. */}
-          <article className="reader" dangerouslySetInnerHTML={{ __html: preview }} />
+          <article className="reader" dir="auto" dangerouslySetInnerHTML={{ __html: preview }} />
         </details>
       )}
 

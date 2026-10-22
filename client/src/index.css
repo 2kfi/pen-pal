@@ -146,7 +146,7 @@ p {
   margin-top: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--danger);
-  border-left-width: 3px;
+  border-inline-start-width: 3px;
   border-radius: var(--radius);
   background: color-mix(in srgb, var(--danger) 8%, transparent);
   font-size: var(--type-sm);
@@ -206,7 +206,7 @@ p {
 .app-header nav {
   display: flex;
   height: 100%;
-  margin-left: var(--space-4);
+  margin-inline-start: var(--space-4);
 }
 
 .app-header nav a {
@@ -240,7 +240,7 @@ p {
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 
 .icon-btn {
@@ -393,7 +393,7 @@ p {
   align-items: center;
   justify-content: center;
   padding: 0 var(--space-1);
-  margin-left: auto;
+  margin-inline-start: auto;
   border-radius: var(--radius-chip);
   border: 1px solid var(--danger);
   color: var(--danger);
@@ -480,7 +480,7 @@ p {
 
   .app-header nav {
     width: 100%;
-    margin-left: 0;
+    margin-inline-start: 0;
     height: auto;
     justify-content: space-around;
   }
@@ -493,7 +493,7 @@ p {
   }
 
   .app-header-actions {
-    margin-left: 0;
+    margin-inline-start: 0;
     width: 100%;
     justify-content: flex-end;
   }
@@ -844,9 +844,9 @@ textarea {
 }
 
 .reader blockquote {
-  margin-left: 0;
-  padding-left: var(--space-4);
-  border-left: 2px solid var(--accent);
+  margin-inline-start: 0;
+  padding-inline-start: var(--space-4);
+  border-inline-start: 2px solid var(--accent);
   color: var(--muted);
 }
 
