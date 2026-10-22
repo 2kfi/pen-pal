@@ -365,7 +365,12 @@ function StartGame({
   loading: boolean;
   onStart: (color: Color) => void;
 }) {
-  if (loading) return <p className="pp-note">Opening your archive&hellip;</p>;
+  if (loading)
+    return (
+      <p className="pp-note" role="status" aria-busy="true">
+        Opening your archive&hellip;
+      </p>
+    );
 
   return (
     <div className="pp-stop">

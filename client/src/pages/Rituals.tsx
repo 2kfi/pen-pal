@@ -148,7 +148,14 @@ export default function Rituals() {
         <h2 id="rit-puzzle-heading">Today&rsquo;s puzzle</h2>
 
         {loading || !puzzle ? (
-          <p className="rit-section-note">Opening the day&rsquo;s puzzle&hellip;</p>
+          /* The slip waits in its own shape: tear edge, stub, one honest line.
+             No fake question to shimmer and swap, and aria-busy says why. */
+          <div className="rit-slip rit-slip--opening" aria-busy="true">
+            <p className="rit-stub">Today</p>
+            <div className="rit-slip-body">
+              <p className="rit-section-note">Opening the day&rsquo;s puzzle&hellip;</p>
+            </div>
+          </div>
         ) : (
           <div className="rit-slip">
             <p className="rit-stub">{formatDay(puzzle.day)}</p>

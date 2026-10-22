@@ -98,6 +98,20 @@
   }
 }
 
+/* The slip's own loading state: the form is here, the contents are not. The
+   stub keeps its shape but prints no date (the day is unknown until the
+   server answers), the body holds enough room that the real question does not
+   shove the rest of the page when it lands. aria-busy on the element says
+   what the words already say. */
+.rit-slip--opening .rit-stub {
+  color: var(--muted);
+}
+
+.rit-slip--opening .rit-slip-body {
+  min-height: 5.5rem;
+  justify-content: center;
+}
+
 /* The question is the subject of this page: it is set at the letter size, in the
  * reading serif, at the measure cap. Nothing on this page is set larger. */
 .rit-question {
