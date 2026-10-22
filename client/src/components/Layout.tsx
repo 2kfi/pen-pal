@@ -1,23 +1,36 @@
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import AppHeader from './AppHeader';
+import CompanionRail from './CompanionRail';
 import { useAuth } from '../stores/auth';
 import { useTheme } from '../stores/theme';
-import { useVault } from '../lib/vault';
-import { activeKey } from '../lib/vault';
+import { useVault, activeKey } from '../lib/vault';
 import Unlock from '../pages/Unlock';
 
 /**
  * App shell.
  *
- * v0.0.2 had no landmarks at all — a bare <header> wrapping everything and no
- * <main>. This adds proper landmark roles, a skip link, and the vault gate.
+ * Design: DESIGN-UPDATED.md §3 - header on top, then the two-column shell: the
+ * correspondence rail on the left, the page on the right, at 1180px of
+ * container. On narrow screens the rail collapses from a column into a strip
+ * above the content, which is the reachable version of the drawer the
+ * reference asks for: one row, always at the top, no overlay state machine
+ * built for a list that can only ever contain one item.
+ *
+ * v0.0.2 had no landmarks at all. Those stay, and the wide grid is opt-in per
+ * route: reading pages keep the 68ch measure, correspondence pages go wide so
+ * the letter grid has room to be a grid.
  */
+const WIDE_ROUTES = ['/letters', '/compose', '/play'];
+
 export default function Layout() {
+  const user = useAuth((s) => s.user);
   const signOut = useAuth((s) => s.signOut);
   const { theme, toggle } = useTheme();
   const status = useVault((s) => s.status);
   const nav = useNavigate();
+  const pathname = useLocation().pathname;
 
-  const onLogout = () => {
+  const onSignOut = () => {
     void fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' }).catch(() => {});
     signOut();
     nav('/login', { replace: true });
@@ -28,6 +41,7 @@ export default function Layout() {
   if (status !== 'unlocked' || !activeKey()) {
     return (
       <>
+        <AppHeader theme={theme} onToggleTheme={toggle} onSignOut={onSignOut} />
         <main id="main">
           <Unlock />
         </main>
@@ -35,39 +49,29 @@ export default function Layout() {
     );
   }
 
+  const wide = WIDE_ROUTES.some((r) => pathname.startsWith(r));
+
   return (
-    <>
+    <div className="app-shell-root">
       <a className="skip-link" href="#main">
         Skip to your letters
       </a>
 
-      <header className="topbar">
-        <div className="topbar-inner">
-          <span className="brand">PenPal</span>
-          <nav aria-label="Primary">
-            <NavLink to="/letters">Letters</NavLink>
-            <NavLink to="/pairing">Invite</NavLink>
-            <NavLink to="/play">Play</NavLink>
-            <NavLink to="/settings">Settings</NavLink>
-          </nav>
-          <div className="topbar-actions">
-            <button
-              type="button"
-              onClick={toggle}
-              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
-            >
-              {theme === 'dark' ? 'Light' : 'Dark'}
-            </button>
-            <button type="button" onClick={onLogout}>
-              Sign out
-            </button>
-          </div>
-        </div>
-      </header>
+      <AppHeader theme={theme} onToggleTheme={toggle} onSignOut={onSignOut} />
 
-      <main id="main">
-        <Outlet />
-      </main>
-    </>
+      <div className={`app-shell ${wide ? 'app-shell-wide' : ''}`}>
+        <aside className="shell-rail">
+          <CompanionRail />
+          <footer className="rail-footer">
+            Signed in as
+            {' '}
+            {user?.friendly_name || user?.username}
+          </footer>
+        </aside>
+        <main id="main" className={wide ? 'main-wide' : ''}>
+          <Outlet />
+        </main>
+      </div>
+    </div>
   );
 }

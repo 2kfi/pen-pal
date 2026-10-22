@@ -155,80 +155,296 @@ p {
 /* ------------------------------------------------------------------ *
  * chrome                                                             *
  * ------------------------------------------------------------------ */
-.topbar {
+/* ------------------------------------------------------------------ *
+ * the 48px application header                                        *
+ * ------------------------------------------------------------------ *
+ * DESIGN-UPDATED.md section 3: full-bleed bar, bottom border, does not
+ * wrap. The postal mark and wordmark sit on --paper for the whole width;
+ * their contents still align to the shell container so the brand sits
+ * above the content column, not at the window edge. */
+.app-header {
   position: sticky;
   top: 0;
   z-index: 20;
+  background: var(--paper);
   border-bottom: 1px solid var(--rule);
-  background: color-mix(in srgb, var(--ink) 88%, transparent);
-  backdrop-filter: blur(10px);
 }
 
-/* The bar's contents share main's measure and padding, so the brand sits above
-   the text column instead of drifting off to the far edge of the window. */
-.topbar-inner {
+.app-header-inner {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
-  max-width: 68ch;
+  gap: var(--space-3);
+  height: 48px;
+  padding-inline: var(--space-5);
+  max-width: 1180px;
   margin-inline: auto;
 }
 
-@media (min-width: 640px) {
-  .topbar-inner {
-    padding: var(--space-3) var(--space-5);
-  }
-}
-
 .brand {
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: var(--type-md);
-  letter-spacing: -0.02em;
-}
-
-.topbar-actions {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   gap: var(--space-2);
-  margin-left: auto;
+  text-decoration: none;
 }
 
-.topbar nav {
+/* The brand mark uses two tokens only: the accent for the wax disc, the
+   accent-ink for its perforation. No third colour is allowed in the bar. */
+.brand-mark {
+  display: block;
+  flex: none;
+}
+
+.brand-word {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--type-sm);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.app-header nav {
   display: flex;
+  height: 100%;
+  margin-left: var(--space-4);
+}
+
+.app-header nav a {
+  display: inline-flex;
+  align-items: center;
+  height: 100%;
+  padding: 0 var(--space-3);
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--type-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease);
+}
+
+.app-header nav a:hover {
+  color: var(--text);
+}
+
+/* Selected gets the narrow accent indicator the reference asks for: a 2px
+   underline drawn inside the row, not a filled pill that would read as a
+   button. --ink on top of it keeps WCAG text contrast while the accent marks
+   position. */
+.app-header nav a.active {
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+.app-header-actions {
+  display: flex;
+  align-items: center;
   gap: var(--space-1);
   margin-left: auto;
 }
 
-.topbar nav a {
+.icon-btn {
   display: inline-flex;
   align-items: center;
-  min-height: var(--target-min);
-  padding: 0 var(--space-3);
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: var(--space-1) var(--space-2);
+  border: none;
   border-radius: var(--radius);
-  color: var(--muted);
-  font-family: var(--font-postmark);
-  font-size: var(--type-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  text-decoration: none;
-  transition: color var(--duration-fast) var(--ease),
-    background-color var(--duration-fast) var(--ease);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--type-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease),
+    color var(--duration-fast) var(--ease);
 }
 
-.topbar nav a:hover {
+.icon-btn:hover {
+  background: var(--rule);
   color: var(--text);
 }
 
-.topbar nav a.active {
-  color: var(--ink);
-  background: var(--accent-wash);
-  font-weight: 700;
+.icon-btn-word {
+  font-weight: 600;
+}
+
+/* The compose action is the one yellow control in the bar, per the reference:
+   the primary action earns the accent, everything else stays neutral. */
+.compose-btn {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.compose-btn:hover {
+  background: var(--accent-hover);
+  color: var(--accent-ink);
+}
+
+/* The monogram avatar. Disc on --paper-2 so it survives both themes, ring on
+   --rule-strong so the circle passes non-text contrast, letter in --text. */
+.avatar {
+  display: inline-flex;
+  flex: none;
+}
+
+.avatar-disc {
+  fill: var(--paper-2);
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.avatar-letter {
+  fill: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+}
+
+.icon-btn .avatar {
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------------------ *
+ * the two-column shell: rail + page                                   *
+ * ------------------------------------------------------------------ *
+ * The reference's friends sidebar, reduced by the product: a friends list
+ * that can only ever hold one row is one row, kept honest by an empty state
+ * that links to the pairing screen. Sticky below the header. */
+.app-shell {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+  max-width: 1180px;
+  margin-inline: auto;
+  padding: var(--space-5) var(--space-5);
+}
+
+.shell-rail {
+  position: sticky;
+  top: calc(48px + var(--space-3));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.companion-rail {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+.rail-title {
+  font-family: var(--font-display);
+  font-size: var(--type-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 0 0 var(--space-2);
+}
+
+.companion-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2);
+  margin-inline: calc(var(--space-2) * -1);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: background-color var(--duration-fast) var(--ease);
+}
+
+.companion-row:hover {
+  background: var(--rule);
+}
+
+.companion-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.companion-name {
+  color: var(--text);
+  font-family: var(--font-display);
+  font-weight: 600;
+  /* One Row, Long Name: clip rather than push the unread badge out. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.companion-status {
+  color: var(--text-secondary);
+  font-size: var(--type-sm);
+}
+
+/* The unread badge: a number (never colour alone) plus an sr-only word, and
+   the --danger red is gated at 4.5:1 by tools/check-contrast.mjs. */
+.companion-unread {
+  min-width: 20px;
+  min-height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--space-1);
+  margin-left: auto;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  font-family: var(--font-display);
+  font-size: var(--type-xs);
+  font-weight: 600;
+}
+
+.companion-avatar-empty {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px dashed var(--rule-strong);
+  flex: none;
+}
+
+.rail-compose {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rail-footer {
+  color: var(--muted);
+  font-size: var(--type-xs);
+  padding-inline: var(--space-2);
+}
+
+/* Reading pages keep the measure; wide routes release it so the letter grid
+   can actually spread. Explicitly opt-in per route, never per accident. */
+.main-wide {
+  max-width: none;
+  margin-inline: 0;
+}
+
+@media (max-width: 899px) {
+  /* One row degrades gracefully: the rail becomes a horizontal strip above
+     the page, card in hand, no drawer machinery for a list of length one. */
+  .app-shell {
+    grid-template-columns: 1fr;
+    padding-inline: var(--space-4);
+  }
+
+  .shell-rail {
+    position: static;
+  }
 }
 
 /* Bottom tab bar on phones. */
 @media (max-width: 639px) {
-  .topbar {
+  .app-header {
     position: fixed;
     top: auto;
     bottom: 0;
@@ -241,46 +457,53 @@ p {
 
   /* Column, not column-reverse: actions on top, tabs underneath. Explicit DOM
      order beats fighting `order` against a reversed flex direction. */
-  /* Two rows (actions + tabs) plus padding. Declared on :root, NOT on .topbar:
-     custom properties inherit downward, so a value set on the bar is invisible
-     to <body>, which is the element that needs to reserve the space.
-     Safe-area is excluded here because body adds it separately. */
+  /* Two rows (actions + tabs) plus padding. Declared on :root, NOT on the
+     header: custom properties inherit downward, so a value set on the bar is
+     invisible to <body>, which is the element that needs the space. Safe-area
+     is excluded here because body adds it separately. */
   :root {
     --nav-h: calc(var(--target-min) + 36px + var(--space-2) * 2);
   }
 
-  .topbar-inner {
+  .app-header-inner {
     flex-direction: column;
     gap: var(--space-1);
     padding: var(--space-2);
+    margin-inline: 0;
+    height: auto;
   }
 
   .brand {
     display: none;
   }
 
-  .topbar-actions {
-    margin-left: 0;
-    justify-content: flex-end;
-    order: -1;
-  }
-
-  .topbar-actions button {
-    min-height: 36px;
-    padding-inline: var(--space-3);
-    font-size: var(--type-xs);
-  }
-
-  .topbar nav {
+  .app-header nav {
     width: 100%;
     margin-left: 0;
+    height: auto;
     justify-content: space-around;
   }
 
-  .topbar nav a {
+  .app-header nav a {
     flex: 1;
     justify-content: center;
+    height: 48px;
     padding: 0 var(--space-1);
+  }
+
+  .app-header-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .icon-btn-word {
+    display: none;
+  }
+
+  .compose-btn {
+    flex: 1;
+    justify-content: center;
   }
 }
 
