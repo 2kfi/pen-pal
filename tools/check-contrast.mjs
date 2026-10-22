@@ -44,14 +44,26 @@ const contrast = (a, b) => {
 const PAIRS = [
   ['text', 'ink', 4.5, 'body text on the page'],
   ['text', 'paper', 4.5, 'body text on a card'],
+  ['text-secondary', 'ink', 4.5, 'secondary text on the page'],
+  ['text-secondary', 'paper', 4.5, 'secondary text on a card'],
   ['muted', 'ink', 4.5, 'postmark metadata on the page'],
   ['muted', 'paper', 4.5, 'postmark metadata on a card'],
-  ['wax', 'ink', 4.5, 'accent link on the page'],
-  ['wax', 'paper', 4.5, 'accent link on a card'],
+  // The accent (#FFC400, identical in both themes) is a fill, not a colour for
+  // text: it is read with --accent-ink, and the pair that matters is the text
+  // on the yellow button. Yellow as text on the light page would measure
+  // 1.50:1, so accent-coloured *text* is the link token's job, and that is
+  // what the two accent pairs here check.
+  ['accent-ink', 'accent', 4.5, 'text on the accent fill'],
+  ['link', 'ink', 4.5, 'accent link on the page'],
+  ['link', 'paper', 4.5, 'accent link on a card'],
+  ['link-hover', 'ink', 4.5, 'hovered link on the page'],
+  ['link-hover', 'paper', 4.5, 'hovered link on a card'],
   ['in-transit', 'ink', 4.5, 'transit label'],
   ['danger', 'ink', 4.5, 'error text'],
   ['rule-strong', 'paper', 3.0, 'interactive border on a card'],
   ['rule-strong', 'ink', 3.0, 'interactive border on the page'],
+  // --focus-ring is solved per theme: the accent yellow is the dark focus
+  // indicator, but on the near-white light page it would measure 1.50:1.
   ['focus-ring', 'ink', 3.0, 'focus indicator'],
 
   // --paper-2 is the *lightest* surface in the dark theme, so it is the worst
@@ -62,7 +74,8 @@ const PAIRS = [
   ['muted', 'paper-2', 4.5, 'postmark metadata on a raised surface'],
   ['rule-strong', 'paper-2', 3.0, 'interactive border on a raised surface'],
   ['text', 'paper-2', 4.5, 'body text on a raised surface'],
-  ['wax', 'paper-2', 4.5, 'accent link on a raised surface'],
+  ['text-secondary', 'paper-2', 4.5, 'secondary text on a raised surface'],
+  ['link', 'paper-2', 4.5, 'accent link on a raised surface'],
 ];
 
 let failures = 0;

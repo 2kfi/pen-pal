@@ -70,44 +70,59 @@ Three families, three jobs. Self-hosted, no CDN.
 
 ## 4. Color
 
-Light-first on paper, dark as ink. Both themes are authored, not derived.
+The 2026 direction (DESIGN-UPDATED.md §2) is a postal-yellow scheme applied to neutral surfaces. Reference values shipped AA failures exactly where the gate checks (§2 authorises tuning on demonstrated mismatch), so every value below is the *solved* version: same hue, checked contrast. Both themes are authored, not derived.
 
-### Dark — "the desk at night"
+### Dark — reference "dark theme"
 | Token | Value | Role |
 |---|---|---|
-| `--ink` | `#0a0a0c` | Page ground. Near-black, honestly dark. |
-| `--paper` | `#14161a` | Raised surface. |
-| `--paper-2` | `#1c1f25` | Input wells. |
-| `--rule` | `#363c47` | Hairlines. Decorative only. |
-| `--rule-strong` | `#666f7e` | Anything interactive. Clears WCAG 2.2 SC 1.4.11 at 3:1 on `--paper-2`, the lightest dark surface. |
-| `--wax` | `#e8a020` | **The seal.** One accent, used sparingly. |
-| `--wax-bright` | `#f5c048` | Wax on hover/active. |
-| `--in-transit` | `#2ec4b6` | Teal — only ever means "travelling". |
-| `--text` | `#e8e4dc` | Warm off-white on cool ground. |
-| `--muted` | `#918b7f` | Warm grey. The lowest permitted token: 4.88:1 on `--paper-2`. The old `#8b8578` measured 4.4997:1 there and failed. |
+| `--ink` | `#1d2028` | Page ground. |
+| `--paper` | `#292d37` | Cards, sidebar rows. |
+| `--paper-2` | `#303542` | Input wells. The lightest dark surface: the worst case for contrast. |
+| `--rule` | `#3b404c` | Hairlines. Decorative only. |
+| `--rule-strong` | `#7a8496` | Anything interactive. Clears WCAG 2.2 SC 1.4.11 at 3:1 on `--paper-2`. |
+| `--accent` | `#ffc400` | Postal yellow. A **fill**, never text on the page: `#FFC400` as text on the light page would measure 1.50:1. |
+| `--accent-hover` | `#ffd33d` | Hover/active on the fill. |
+| `--accent-ink` | `#18243a` | The only colour allowed *on* yellow. 9.72:1. |
+| `--in-transit` | `#17b3a4` | Teal — only ever means "travelling". |
+| `--link` | `#7fb2ff` | Accent-coloured **text** that is not text-on-yellow. |
+| `--link-hover` | `#9dbfff` | |
+| `--danger` | `#ff7070` | |
+| `--success` | `#62c991` | |
+| `--text` | `#e7eaf0` | |
+| `--text-secondary` | `#b5bac5` | |
+| `--muted` | `#9aa0ac` | The lowest permitted **readable** token: 4.67:1 on `--paper-2`. The reference's `#858B98` measured 3.59:1 there and failed. |
+| `--focus-ring` | `#ffc400` | Yellow works on this dark page ground (10.20:1). |
 
-### Light — "the letter on the table"
+### Light — reference "light theme"
 | Token | Value | Role |
 |---|---|---|
-| `--ink` | `#f4f1ea` | Paper ground. |
-| `--paper` | `#fbf9f4` | Raised surface. |
-| `--paper-2` | `#ffffff` | Input wells. |
-| `--rule` | `#cfc6b2` | Hairlines. Decorative only. |
-| `--rule-strong` | `#98896a` | Anything interactive. Clears SC 1.4.11 at 3:1 on `--paper-2`. |
-| `--wax` | `#a8490a` | **Not `#b45309`** (measured 4.45:1 on `--ink`) and **not `#7cb342`**, which failed worse. V0.0.2 patched an AA failure with `--amber-text`, a second accent used only for text. Fixed at the source instead. |
-| `--wax-bright` | `#7c3007` | |
+| `--ink` | `#f8f8f8` | Page ground. |
+| `--paper` | `#ffffff` | Cards. |
+| `--paper-2` | `#ffffff` | Input wells. Same as `--paper` by the reference's own choice. |
+| `--rule` | `#dedede` | Hairlines. Decorative only. |
+| `--rule-strong` | `#8b8b8b` | Anything interactive. Clears SC 1.4.11 at 3:1. |
+| `--accent` | `#ffc400` | Same fill as dark, per the reference. |
+| `--accent-hover` | `#e9ad00` | |
+| `--accent-ink` | `#18243a` | |
 | `--in-transit` | `#0f766e` | |
-| `--text` | `#1f1d1a` | |
-| `--muted` | `#6b665c` | |
+| `--link` | `#0060cd` | **Not `#0878F9`** (the reference link measured 3.90:1 on the page and failed). |
+| `--link-hover` | `#004fa8` | |
+| `--danger` | `#d92d20` | |
+| `--success` | `#248a57` | |
+| `--text` | `#17243a` | |
+| `--text-secondary` | `#686868` | |
+| `--muted` | `#707070` | The reference's `#9A9A9A` measured 2.81:1 on white and failed. |
+| `--focus-ring` | `#b45309` | **Not `#e9ad00`** — yellow on the near-white page is invisible; the focus indicator is re-solved per theme. |
 
 **Contrast contract (blocking, verified in CI)**
 - Body text ≥ **4.5:1**. Large text and non-text UI ≥ **3:1**.
-- `--muted` is the *lowest* permitted token. If a design needs something dimmer, the design is wrong.
+- `--muted` is the *lowest* permitted readable token. If a design needs something dimmer, the design is wrong.
+- Yellow is one of two things per screen: the primary action's fill, or the status marker *carrying* it. Never yellow text on a light surface.
 - Status is never colour-only — every state chip carries a word.
 
 ### Rules
 - **One radius:** `--radius: 3px`. Letters get 2px. Chips get 999px. Nothing in between.
-- Wax is used for **one thing per screen**: the seal, or the primary action. Never both.
+- Accent yellow is used for **one thing per screen**: the primary action, or a single status. Never both.
 - Teal means transit. Never decorative.
 
 ---

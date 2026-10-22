@@ -87,7 +87,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--wax);
+  color: var(--success);
 }
 
 .sg-verdict.is-fail .sg-verdict-word {
@@ -267,9 +267,9 @@
 }
 
 .sg-flag.is-pass {
-  border-color: var(--wax);
-  color: var(--wax);
-  background: var(--wax-wash);
+  border-color: var(--success);
+  color: var(--success);
+  background: var(--transit-wash);
 }
 
 .sg-flag.is-fail {
@@ -450,7 +450,7 @@
 
 .sg-measure-rule {
   height: 1px;
-  background: var(--wax);
+  background: var(--accent);
 }
 
 /* ------------------------------------------------------------------ *
@@ -468,7 +468,7 @@
 
 .sg-scale-bar {
   height: var(--sg-size);
-  background: var(--wax);
+  background: var(--accent);
   opacity: 0.35;
   border-radius: var(--radius);
 }
@@ -562,9 +562,9 @@
 }
 
 .sg-badge.is-on {
-  border-color: var(--wax);
-  color: var(--wax);
-  background: var(--wax-wash);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent);
 }
 
 /* The wax at press size, positioned in the flow. */
@@ -788,9 +788,9 @@
 }
 
 .sg-chip.is-wax {
-  border-color: var(--wax);
-  color: var(--wax);
-  background: var(--wax-wash);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  background: var(--accent);
 }
 
 .sg-chip.is-danger {

@@ -104,14 +104,14 @@
 /* The one accent on the screen. Wax marks the action you would take if you did
    nothing else; everything else is a plain control. */
 .pp-primary {
-  border-color: var(--wax);
-  color: var(--wax);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .pp-primary:hover:not(:disabled) {
-  background: var(--wax-wash);
-  color: var(--wax-bright);
-  border-color: var(--wax-bright);
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
 }
 
 /* ------------------------------------------------------------------ *

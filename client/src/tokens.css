@@ -4,81 +4,97 @@
  * Source of truth: docs/DESIGN.md. If a value is not defined here it does not
  * belong in a component. Raw hex is banned outside this file.
  *
- * v0.0.2 carried 24 ad-hoc colour variables, then patched an AA contrast failure
- * by inventing a second accent token (--amber-text) purely so text could use a
- * different green than fills. That is a symptom of picking a palette before
- * checking it. These are checked.
+ * v2 palette: the postal-yellow scheme from the 2026 UI direction
+ * (DESIGN-UPDATED.md §2), solved for contrast by tools/check-contrast.mjs.
+ * The reference palette shipped AA failures exactly where the gate checks —
+ * muted #9A9A9A on white measured 2.81:1, and yellow #FFC400 as focus on the
+ * light page measured 1.50:1 — so values were re-solved to pass while keeping
+ * the reference hue. The reference itself says (§2): "Tune only when a real
+ * rendered screen demonstrates a consistent mismatch."
  */
 
 /* ------------------------------------------------------------------ *
- * dark — "the desk at night" (default)                               *
+ * dark — reference "dark theme" surfaces                              *
  * ------------------------------------------------------------------ */
 [data-theme='dark'] {
-  --ink: #0a0a0c;
-  --paper: #14161a;
-  --paper-2: #1c1f25;
+  --ink: #1d2028;
+  --paper: #292d37;
+  --paper-2: #303542; /* lightest dark surface: the worst case for contrast */
   /* Two border weights. --rule is a decorative divider; --rule-strong outlines
      anything interactive and clears WCAG 2.2 SC 1.4.11 (3:1 non-text contrast).
-     Using one token for both means either loud dividers or invisible controls. */
-  --rule: #363c47;
-  /* 3.25:1 on --paper-2, the lightest dark surface and therefore the worst
-     case. The old #5a6474 measured 2.76:1 there and FAILED SC 1.4.11 — which
-     is every input border in the dark theme, not a decorative hairline. The
-     gate checked this token only against --ink and --paper, both darker, so
-     the failure was invisible to it. --paper-2 is now checked too. */
-  --rule-strong: #666f7e;
+     The reference palette's #3B404C border measured 1.18:1 on --paper-2, so
+     interactive borders get their own solved value --rule-strong #7A8496. */
+  --rule: #3b404c;
+  --rule-strong: #7a8496;
 
-  --wax: #e8a020;
-  --wax-bright: #f5c048;
-  --in-transit: #2ec4b6;
-  --danger: #e0524d;
+  /* The reference keeps the accent identical in both themes: a fill with dark
+     ink text (#18243A on #FFC400: 9.72:1), never yellow text on a dark page
+     treated as ordinary copy — accent-coloured text is the link token's job. */
+  --accent: #ffc400;
+  --accent-hover: #ffd33d;
+  --accent-ink: #18243a;
 
-  --text: #e8e4dc;
-  /* 4.88:1 on --paper-2. The old #8b8578 measured 4.4997:1 there — a FAIL that
-     *displayed* as "4.50" and so looked like a pass. Secondary text on raised
-     surfaces is exactly where this token gets used. */
-  --muted: #918b7f;
+  --in-transit: #17b3a4;
+  --link: #7fb2ff;
+  --link-hover: #9dbfff;
+  --danger: #ff7070;
+  --success: #62c991;
 
-  --wax-wash: rgba(232, 160, 32, 0.09);
-  --transit-wash: rgba(46, 196, 182, 0.09);
-  --focus-ring: #f5c048;
+  --text: #e7eaf0;
+  --text-secondary: #b5bac5;
+  /* Reference muted #858B98 measured 3.59:1 on --paper-2; solved to AA. */
+  --muted: #9aa0ac;
+
+  --accent-wash: rgba(255, 196, 0, 0.1);
+  --transit-wash: rgba(23, 179, 164, 0.1);
+  --focus-ring: #ffc400;
 
   color-scheme: dark;
 }
 
 /* ------------------------------------------------------------------ *
- * light — "the letter on the table"                                  *
+ * light — reference "light theme" surfaces                            *
  * ------------------------------------------------------------------ */
 [data-theme='light'] {
-  --ink: #f4f1ea;
-  --paper: #fbf9f4;
+  --ink: #f8f8f8;
+  --paper: #ffffff;
   --paper-2: #ffffff;
-  --rule: #cfc6b2;
-  --rule-strong: #98896a;
+  --rule: #dedede;
+  --rule-strong: #8b8b8b;
 
-  /* #a8490a, not #b45309: that measured 4.45:1 against --ink, just under AA.
-     Not #7cb342 either — the old amber failed badly and the "fix" was to add a
-     second accent token used only for text. Fixed at the source instead. */
-  --wax: #a8490a;
-  --wax-bright: #7c3007;
+  --accent: #ffc400;
+  /* Yellow on the near-white page measures 1.50:1 — it may fill a stamp or a
+     button but it can never be the focus indicator here. */
+  --accent-hover: #e9ad00;
+  --accent-ink: #18243a;
+
   --in-transit: #0f766e;
-  --danger: #b91c1c;
+  /* Reference link #0878F9 measured 3.90:1 on the page; solved to AA. */
+  --link: #0060cd;
+  --link-hover: #004fa8;
+  --danger: #d92d20;
+  --success: #248a57;
 
-  --text: #1f1d1a;
-  --muted: #6b665c;
+  --text: #17243a;
+  --text-secondary: #686868;
+  /* Reference muted #9A9A9A measured 2.81:1 on white; solved to AA. */
+  --muted: #707070;
 
-  --wax-wash: rgba(180, 83, 9, 0.08);
+  --accent-wash: rgba(233, 173, 0, 0.12);
   --transit-wash: rgba(15, 118, 110, 0.08);
-  --focus-ring: #92400e;
+  --focus-ring: #b45309;
 
   color-scheme: light;
 }
 
 /* ------------------------------------------------------------------ *
- * type — three families, three jobs, two weights each                *
- * ------------------------------------------------------------------ */
+ * type — three families, three jobs                                   *
+ * ------------------------------------------------------------------ *
+ * The 2026 direction replaces the display face with Inter for the
+ * interface chrome; Literata stays for reading a letter and Space Mono
+ * for postal metadata. See fonts.css / docs/DESIGN.md §5. */
 :root {
-  --font-display: 'Syne', Georgia, serif;
+  --font-display: 'Inter', system-ui, sans-serif;
   --font-reading: 'Literata', Georgia, serif;
   --font-postmark: 'Space Mono', ui-monospace, monospace;
 
@@ -96,9 +112,10 @@
 }
 
 /* ------------------------------------------------------------------ *
- * space, radius, motion                                             *
+ * space, radius, motion                                               *
  * ------------------------------------------------------------------ */
 :root {
+  /* The reference spacing scale (§2): 4px base unit, steps to 48px. */
   --space-1: 0.25rem;
   --space-2: 0.5rem;
   --space-3: 0.75rem;
@@ -107,7 +124,8 @@
   --space-6: 2rem;
   --space-7: 3rem;
 
-  /* One radius. Letters get 2px, chips get a pill. Nothing in between. */
+  /* The reference is square-cornered (§2): 2-4px cards, no pills except chips
+     and buttons. Letters get 2px, chips get a pill. Nothing in between. */
   --radius: 3px;
   --radius-letter: 2px;
   --radius-chip: 999px;

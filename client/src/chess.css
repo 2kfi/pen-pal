@@ -97,7 +97,7 @@
 }
 
 .cb-sq:focus-visible {
-  outline: 3px solid var(--wax-bright);
+  outline: 3px solid var(--accent-hover);
   outline-offset: -3px;
   z-index: 1;
 }
@@ -121,23 +121,23 @@
    the square, so the origin is identifiable without colour. */
 .cb-sq--from::before,
 .cb-sq--to::before {
-  background: var(--wax);
+  background: var(--accent);
   opacity: 0.16;
 }
 
 .cb-sq--to::after {
-  border: 3px solid var(--wax);
+  border: 3px solid var(--accent);
   opacity: 0.85;
 }
 
 /* Selection wins over the last-move wash but not over a check ring. */
 .cb-sq--selected::before {
-  background: var(--wax-bright);
+  background: var(--accent-hover);
   opacity: 0.28;
 }
 
 .cb-sq--selected::after {
-  border: 3px solid var(--wax-bright);
+  border: 3px solid var(--accent-hover);
   opacity: 1;
 }
 
@@ -263,7 +263,7 @@
   top: calc(var(--cb-rank) * 100% / 8);
   display: grid;
   grid-template-rows: repeat(4, 1fr);
-  border: 1px solid var(--wax);
+  border: 1px solid var(--accent);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: 0 var(--space-2) var(--space-3) color-mix(in srgb, var(--ink) 45%, transparent);
@@ -307,7 +307,7 @@
 }
 
 .cb-promo-btn:focus-visible {
-  outline: 3px solid var(--wax-bright);
+  outline: 3px solid var(--accent-hover);
   outline-offset: -3px;
 }
 
@@ -450,8 +450,9 @@
 }
 
 .cb-btn:hover:not(:disabled) {
-  border-color: var(--wax);
-  color: var(--wax-bright);
+  background: var(--accent-wash);
+  border-color: var(--rule-strong);
+  color: var(--text);
 }
 
 .cb-btn:disabled {
@@ -462,8 +463,9 @@
 }
 
 .cb-btn[aria-pressed='true'] {
-  border-color: var(--wax);
-  color: var(--wax);
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .cb-notelist {
