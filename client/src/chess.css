@@ -97,7 +97,10 @@
 }
 
 .cb-sq:focus-visible {
-  outline: 3px solid var(--accent-hover);
+  /* --focus-ring, not a fill token: the ring has to clear 3:1 against the
+     squares, and the accent yellows measure 1.5:1 on the light theme's paper
+     squares. See tokens.css - the ring is re-solved per theme. */
+  outline: 3px solid var(--focus-ring);
   outline-offset: -3px;
   z-index: 1;
 }
@@ -307,7 +310,7 @@
 }
 
 .cb-promo-btn:focus-visible {
-  outline: 3px solid var(--accent-hover);
+  outline: 3px solid var(--focus-ring);
   outline-offset: -3px;
 }
 

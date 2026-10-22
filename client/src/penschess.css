@@ -29,28 +29,12 @@
 }
 
 /*
- * The one place this app leaves the reading measure.
- *
- * `main` is capped at 68ch, which is right for a letter and wrong for a board:
- * a 544px board and a rail beside it need about 900px, and inside 565px the
- * board gets squeezed until its rows and columns stop agreeing with each other.
- * Above 1024px this page therefore breaks out to the window and centres itself
- * again, which is the two-zone desktop layout from DESIGN §8 with the same
- * gutter it has everywhere else.
+ * No 50vw break-out any more: the app shell gives /play a wide column
+ * (components/Layout.tsx opts the route into .main-wide), and a negative
+ * margin at 50vw would slide the board bodily under the sticky
+ * correspondence rail instead of escaping a measure. The two-zone grid
+ * below keeps the board left, paper right; the rail stays above both.
  */
-@media (min-width: 1024px) {
-  /*
-    Only while there is a board on the page. An empty state, a locked archive
-    and an invitation are all reading, and they stay in the measure with
-    everything else.
-  */
-  .pp:has(.pp-table) {
-    margin-inline: calc(50% - 50vw);
-    /* Full bleed, then padded back to the window's own gutter — or wider, so the
-       two zones stay centred on a big screen instead of clinging to the left. */
-    padding-inline: max(var(--space-5), calc((100vw - 64rem) / 2));
-  }
-}
 
 .pp-heading {
   margin: 0;
@@ -249,23 +233,13 @@
   margin-top: 0;
 }
 
-/* Rows on a spine, the way letters sit in the archive: one hairline running
-   down the left, each game a node on it. Not a table, and not cards. */
+/* Plain hairline rows. The archive grew a card grid in phase 3, so the spine
+   node language retired with the letter list it belonged to; a game sits on a
+   hairline the way an offer does - not a table, not cards. */
 .pp-list {
-  position: relative;
   list-style: none;
   margin: 0;
-  padding: 0 0 0 var(--space-4);
-}
-
-.pp-list::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: var(--space-2);
-  bottom: var(--space-2);
-  width: 1px;
-  background: var(--rule);
+  padding: 0;
 }
 
 .pp-game {
@@ -275,18 +249,6 @@
 
 .pp-game + .pp-game {
   border-top: 1px solid var(--rule);
-}
-
-/* The node itself. A 5px ink square, not a dot: at 1px it disappears at small
-   sizes and a border-radius blob is the one shape this system does not use. */
-.pp-game::before {
-  content: '';
-  position: absolute;
-  left: calc(-1 * var(--space-4));
-  top: calc(var(--space-3) + 0.45em);
-  width: 5px;
-  height: 5px;
-  background: var(--text);
 }
 
 .pp-game-postmark {

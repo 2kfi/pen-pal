@@ -9,7 +9,8 @@
  * boxed thing on the page. The streak calendar and the anniversary sit directly
  * on the paper with a hairline between them, in the archive's spine language,
  * because a ritual that is a row of three identical rounded cards is not a
- * ritual, it is a dashboard.
+ * ritual, it is a dashboard. One accent per screen, and here the accent is
+ * the seal button on the slip - the calendar and the year count stay ink.
  */
 
 .rituals {
@@ -196,12 +197,12 @@
   border-top: 2px solid var(--rule-strong);
 }
 
-/* Two numbers, in the display face at size. The one memorable thing on the page
-   is still the wax on the button; these are just the answer, set large because
-   they are the answer. */
+/* Two numbers, in the display face at size. Set large because they are the
+   answer, and 700 is the heaviest weight we ship: Inter's 800 is not on disk,
+   so asking for it would synthesise a font nobody cut. */
 .rit-answer-value {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: var(--type-xl);
   line-height: 1;
   letter-spacing: -0.02em;
@@ -345,7 +346,7 @@
 
 .rit-count-value {
   font-family: var(--font-display);
-  font-weight: 800;
+  font-weight: 700;
   font-size: var(--type-2xl);
   line-height: 0.95;
   letter-spacing: -0.03em;

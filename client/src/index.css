@@ -548,7 +548,6 @@ button {
   color: var(--text);
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius);
-  font-family: var(--font-postmark);
   font-size: var(--type-sm);
   white-space: nowrap;
   cursor: pointer;
@@ -1098,6 +1097,98 @@ textarea {
   text-transform: uppercase;
   color: var(--muted);
 }
+/* ------------------------------------------------------------------ *
+ * segmented control                                                   *
+ * ------------------------------------------------------------------ *
+ * Play's modes and Settings' themes were rows of buttons where the
+ * selected one turned yellow. A row of three pills with one filled yellow
+ * is the Bootstrap-days treatment for what is a radio group, and it spends
+ * the accent on *selection* - which the reference handles with a narrow
+ * indicator - so the yellow the screen actually earns (the primary action)
+ * stops being spent twice. The selected segment gets the wash and a 2px
+ * accent underline; the accent fill stays with the one real button. */
+.seg {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: var(--space-1);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.seg button {
+  min-height: var(--target-min);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+  font-size: var(--type-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.seg button:hover:not([aria-checked='true']) {
+  color: var(--text);
+  background: var(--rule);
+}
+
+.seg button[aria-checked='true'] {
+  background: var(--accent-wash);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+
+/* On a phone the segments take the bar's width. They wrap, because a flex
+   row of five nowrap labels has a min-content wider than 375px, and a flex
+   row that cannot wrap would drag the whole grid column out to that width -
+   the 81px of sideways scroll our own e2e gate caught (R-03). */
+@media (max-width: 639px) {
+  .seg {
+    display: flex;
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .seg button {
+    flex: 1 0 44%;
+    min-width: 44%;
+    max-width: 100%;
+    padding: 0 var(--space-2);
+  }
+}
+
+/* Settings: sections keep the card base and get one rhythm step between
+   them; the profile head is the one row where the avatar sizes up. */
+.settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.settings .card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.settings h2 {
+  margin: 0;
+}
+
+.settings-profile-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+}
+
+.field-grow {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ------------------------------------------------------------------ *
  * page shells                                                        *
  * ------------------------------------------------------------------ */

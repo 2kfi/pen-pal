@@ -43,7 +43,7 @@ export default function Play() {
     <div className="play">
       <h1>Play</h1>
 
-      <div className="row" role="radiogroup" aria-label="Game mode">
+      <div className="seg" role="radiogroup" aria-label="Game mode">
         {(
           [
             ['two-player', 'Two players'],
@@ -56,7 +56,6 @@ export default function Play() {
             type="button"
             role="radio"
             aria-checked={mode === value}
-            className={mode === value ? 'primary' : undefined}
             onClick={() => setMode(value)}
           >
             {label}
@@ -142,7 +141,7 @@ function EngineGame() {
 
         setLine(
           `${LEVEL_LABELS[level]} played ${result.san ?? 'a move'} — ` +
-            `depth ${result.depth}, ${(result.nodes / 1000).toFixed(0)}k nodes in ${result.ms} ms` +
+            `depth ${result.depth}, ${(result.nodes / 1000).toFixed(0)}k nodes in ${Math.round(result.ms)} ms` +
             (result.truncated ? ', cut short' : '') +
             '.',
         );
@@ -164,14 +163,13 @@ function EngineGame() {
 
   return (
     <div>
-      <div className="row" role="radiogroup" aria-label="Difficulty">
+      <div className="seg" role="radiogroup" aria-label="Difficulty">
         {LEVELS.map((option) => (
           <button
             key={option}
             type="button"
             role="radio"
             aria-checked={level === option}
-            className={level === option ? 'primary' : undefined}
             onClick={() => setLevel(option)}
           >
             {LEVEL_LABELS[option]}
@@ -179,20 +177,21 @@ function EngineGame() {
         ))}
       </div>
 
-      <div className="row" style={{ marginTop: 'var(--space-2)' }}>
+      <div className="row">
         <span className="muted">You play</span>
-        {(['w', 'b'] as Color[]).map((c) => (
-          <button
-            key={c}
-            type="button"
-            role="radio"
-            aria-checked={humanColor === c}
-            className={humanColor === c ? 'primary' : undefined}
-            onClick={() => setHumanColor(c)}
-          >
-            {c === 'w' ? 'White' : 'Black'}
-          </button>
-        ))}
+        <div className="seg">
+          {(['w', 'b'] as Color[]).map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={humanColor === c}
+              onClick={() => setHumanColor(c)}
+            >
+              {c === 'w' ? 'White' : 'Black'}
+            </button>
+          ))}
+        </div>
         <button type="button" onClick={stop} disabled={!thinking}>
           Stop thinking
         </button>
