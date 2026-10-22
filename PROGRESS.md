@@ -121,10 +121,10 @@ These surfaced during the work and are tracked here so they don't get lost.
 Every one of these must stay green.
 
 ```bash
-npm run design:check                      # 32 contrast pairs + the docs colour gate
+npm run design:check                      # 30 contrast pairs + the docs colour gate
 npm run lint
-npm test                                  # 245 server tests
-npm --prefix client test                  # 50 crypto, perft, session
+npm test                                  # 286 server tests
+npm --prefix client test                  # 76 crypto, perft, session, pgn
 npm --prefix client run build             # typecheck + vite build
 ```
 
