@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Navigate } from 'react-router-dom';
+import Avatar from '../components/Avatar';
 import Field from '../components/Field';
+import StampArt from '../components/StampArt';
 import { GLYPH } from '../lib/chessEngine';
 import '../styleguide.css';
 
@@ -908,7 +910,7 @@ function Gallery() {
         <Part
           name="Button"
           cls="button"
-          rule="Postmark type on a raised well. Every button in the product is at least 44px tall because --target-min is a floor, not a suggestion."
+          rule="Interface type on a raised well. Every button in the product is at least 44px tall because --target-min is a floor, not a suggestion."
         >
           <div className="sg-row">
             <button type="button">Write a letter</button>
@@ -927,7 +929,7 @@ function Gallery() {
         <Part
           name="Primary button"
           cls="button.primary"
-          rule="The only wax on the screen when it is present. If a seal is also on the page, the button steps back down to a postmark — see .compose.is-sealing."
+          rule="The one accent fill on the screen when it is present. If a seal is also on the page, the button steps back down — see .compose.is-sealing."
         >
           <div className="sg-row">
             <button type="button" className="primary">
@@ -939,6 +941,24 @@ function Gallery() {
             <a href="#sg-parts" className="button primary">
               As a link
             </a>
+          </div>
+        </Part>
+
+        <Part
+          name="Segmented control"
+          cls=".seg"
+          rule="A radio group pretending to be nothing else. The selected segment carries the accent wash and a 2px accent underline, never a fill — the accent fill answers to a primary action, and a state is not an action."
+        >
+          <div role="radiogroup" aria-label="Specimen: a segmented control" className="seg sg-demo-seg">
+            <button type="button" role="radio" aria-checked="true">
+              Draft
+            </button>
+            <button type="button" role="radio" aria-checked="false">
+              Sealed
+            </button>
+            <button type="button" role="radio" aria-checked="false">
+              In transit
+            </button>
           </div>
         </Part>
 
@@ -1004,7 +1024,6 @@ function Gallery() {
           rule="DESIGN §5. The four states differ by what they refuse to draw: a draft shows its words, a sealed letter does not, a travelling one blurs them, an opened one gives them up with the wax still on it."
         >
           <div className="sg-states">
-            <div className="sg-spine" aria-hidden />
             {LETTER_STATES.map((s) => (
               <div className="sg-state" key={s.key}>
                 <span className="sg-state-label">{s.state}</span>
@@ -1055,20 +1074,50 @@ function Gallery() {
         </Part>
 
         <Part
-          name="Spine"
-          cls=".archive, .spine"
-          rule="One hairline the height of the archive, with each letter a node on it. This is the idea that makes the product recognisable, and it was recovered from the deleted legacy stylesheet rather than invented."
+          name="Archive"
+          cls=".archive, .letter, .letter-head"
+          rule="A responsive card grid — four across at the reference width, one on a phone — not a list. The card head is postmark words left and this letter's own stamp right; you cannot tell a sealed letter from an opened one by its sleeve."
         >
           <div className="sg-letters archive">
-            <div className="spine" aria-hidden />
-            <div className="letter">
-              <div className="letter-state">2 Feb · opened</div>
-              <p className="letter-excerpt">The first one. Two words and a drawing of a bird.</p>
-            </div>
-            <div className="letter transit">
-              <div className="letter-state">2 Mar · in transit</div>
-              <p className="letter-excerpt">Still travelling between here and there.</p>
-            </div>
+            {[
+              { state: '2 Feb · opened', excerpt: 'The first one. Two words and a drawing of a bird.', transit: false, unread: false },
+              { state: '2 Mar · in transit', excerpt: 'Still travelling between here and there.', transit: true, unread: false },
+              { state: '9 Mar · unread', excerpt: 'Unopened, and the dot says so without colour alone.', transit: false, unread: true },
+            ].map((s) => (
+              <div className={`letter${s.transit ? ' transit' : ''}`} key={s.state}>
+                <div className="letter-head">
+                  <div className="letter-state">{s.state}</div>
+                  {s.unread && <span className="letter-dot" aria-hidden="true" />}
+                  <StampArt seed={s.state} />
+                </div>
+                <p className="letter-excerpt">{s.excerpt}</p>
+              </div>
+            ))}
+          </div>
+        </Part>
+
+        <Part
+          name="Avatar"
+          cls=".avatar (Avatar.tsx)"
+          rule="A monogram, not a picture: the first grapheme of a name on a disc, drawn to three fixed sizes. It never claims more than the product knows, which is the name and nothing else."
+        >
+          <div className="sg-row" style={{ alignItems: 'flex-end' }}>
+            <Avatar name="Ada" size={38} />
+            <Avatar name="Ada" size={28} />
+            <Avatar name="Sam" size={56} />
+            <span className="sg-scale-key">contact row · header · profile</span>
+          </div>
+        </Part>
+
+        <Part
+          name="Stamp"
+          cls=".stamp (StampArt.tsx)"
+          rule="Token-only SVG, seeded by the letter id, so a letter keeps its stamp across visits and no two neighbours share a motif. Decorative by aria-hidden; the sleeve never changes with the letter's state."
+        >
+          <div className="sg-row">
+            {[1, 2, 3, 4, 5].map((seed) => (
+              <StampArt key={seed} seed={seed} />
+            ))}
           </div>
         </Part>
 

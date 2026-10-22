@@ -754,7 +754,6 @@
 
 .sg-letters {
   position: relative;
-  padding-left: var(--space-5);
 }
 
 .sg-chip-row {
