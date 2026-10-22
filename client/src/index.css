@@ -414,6 +414,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: var(--type-sm);
 }
 
 .rail-footer {
@@ -536,6 +537,7 @@ main {
  * controls                                                           *
  * ------------------------------------------------------------------ */
 button {
+  font-family: var(--font-display);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -566,6 +568,7 @@ button:disabled {
 /* A router Link that looks like a button. Nesting <button> inside <a> is invalid
    HTML and produces two nested interactive elements in the accessibility tree. */
 a.button {
+  font-family: var(--font-display);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -576,7 +579,6 @@ a.button {
   border-radius: var(--radius);
   background: var(--paper-2);
   color: var(--text);
-  font-family: var(--font-postmark);
   font-size: var(--type-sm);
   text-decoration: none;
   cursor: pointer;
@@ -655,34 +657,37 @@ textarea {
 }
 
 /* ------------------------------------------------------------------ *
- * the archive — a spine, not a card grid                             *
+ * the archive — a responsive letter-card grid                        *
  * ------------------------------------------------------------------ */
 .archive {
-  position: relative;
-  padding-left: var(--space-5);
-  margin-top: var(--space-4);
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-5);
 }
 
-.spine {
-  position: absolute;
-  left: 5px;
-  top: 0;
-  bottom: 0;
-  width: 1px;
-  background: linear-gradient(
-    to bottom,
-    transparent,
-    var(--rule) var(--space-2),
-    var(--rule) calc(100% - var(--space-2)),
-    transparent
-  );
+/* DESIGN-UPDATED.md section 5: four columns at the reference width, down to
+   one on a phone. minmax(0,1fr) so a long unbroken line cannot force the
+   column wider than its track. */
+@media (min-width: 900px) {
+  .archive {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1180px) {
+  .archive {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
 }
 
 .letter {
   position: relative;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  min-height: 168px;
   padding: var(--space-4);
-  margin-bottom: var(--space-4);
+  margin-bottom: 0;
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: var(--radius-letter);
@@ -692,25 +697,69 @@ textarea {
 }
 
 .letter:hover {
+  border-color: var(--rule-strong);
+}
+
+.letter:hover {
   border-color: var(--muted);
 }
 
-.letter::before {
-  content: '';
-  position: absolute;
-  left: calc(-1 * var(--space-5) + 1px);
-  top: var(--space-4);
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--rule);
-  border: 2px solid var(--ink);
+/* The card head: postmark left, unread dot, this letter's own stamp right. */
+.letter-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
 }
 
-/* A letter still travelling. Teal means transit and nothing else. */
-.letter.transit::before {
-  background: var(--in-transit);
-  animation: drift 3s var(--ease) infinite;
+.letter-head .letter-state {
+  min-width: 0;
+  flex: 1;
+  padding-top: var(--space-1);
+}
+
+.stamp {
+  display: block;
+  flex: none;
+}
+
+/* Perforation bites are punched in the card's own paper, so the holes read as
+   holes; the border is the engraved frame; the motif strokes are the same
+   --rule-strong ink used by structural art. No colour is invented anywhere. */
+.stamp-perf {
+  fill: var(--paper);
+}
+
+.stamp-border {
+  fill: var(--paper-2);
+  stroke: var(--rule-strong);
+  stroke-width: 1;
+}
+
+.stamp-line,
+.stamp-line-h,
+.stamp-line-h2 {
+  stroke: var(--rule-strong);
+  fill: none;
+  stroke-width: 1.1;
+}
+
+.stamp-line-h {
+  stroke-linecap: round;
+}
+
+.stamp-line-h2 {
+  stroke-width: 0.9;
+}
+
+/* The unread dot: visible, and the sr-only "(unread)" in the markup keeps
+   status non-colour-only. */
+.letter-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: var(--space-2);
+  border-radius: 50%;
+  background: var(--danger);
+  flex: none;
 }
 
 .letter.transit .letter-excerpt {
@@ -721,6 +770,10 @@ textarea {
 
 .letter.transit .letter-state {
   color: var(--in-transit);
+}
+
+.letter[data-state='failed'] {
+  border-color: var(--danger);
 }
 
 @keyframes drift {
@@ -822,6 +875,33 @@ textarea {
 /* ------------------------------------------------------------------ *
  * compose                                                            *
  * ------------------------------------------------------------------ */
+/* The compose sheet: the one surface that literally is ink on paper.
+   A card surface with a letter's radius, the writing area transparent so the
+   words sit on the sheet rather than in a control, and the reading serif -
+   the same type the recipient will read, so what you see is what they get. */
+.compose {
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-letter);
+  padding: var(--space-5);
+}
+
+.compose-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.compose .field textarea {
+  font-family: var(--font-reading);
+  font-size: var(--type-md);
+  line-height: var(--leading-reading);
+  background: var(--paper-2);
+  color: var(--text);
+}
+
 .compose-actions {
   display: flex;
   flex-wrap: wrap;

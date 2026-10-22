@@ -30,6 +30,7 @@ import { activeKey } from '../lib/vault';
 import { isEnvelope, openLetter } from '../lib/crypto';
 import { previewText } from '../lib/letterBody';
 import { arrivesAt, isFailed, isPending, isUnread } from '../lib/sync';
+import StampArt from '../components/StampArt';
 
 type NodeState =
   | { kind: 'transit'; arrivesAt: string }
@@ -47,7 +48,7 @@ function postmark(letter: Letter, isMine: boolean): string {
 }
 
 /**
- * One letter on the spine.
+ * One letter in the archive grid.
  *
  * Decryption is keyed on `letter.encrypted_content`, not on the whole object.
  * The optimistic row, a `sending` letter, and its server replacement are three
@@ -116,11 +117,18 @@ function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
 
   const body = (
     <>
-      <div className="letter-state">
-        {postmark(letter, isMine)}
+      {/* The card head: postmark words left, this letter's own stamp right. The
+          stamp is decorative (aria-hidden) and identical across states - you
+          cannot tell a sealed letter from an opened one by its sleeve. */}
+      <div className="letter-head">
+        <div className="letter-state">
+          {postmark(letter, isMine)}
         {inTransit && <span> · in transit</span>}
         {letter.state === 'replied' && <span> · replied</span>}
-        {pending && <span> · sending</span>}
+          {pending && <span> · sending</span>}
+        </div>
+        {unread && <span className="letter-dot" aria-hidden="true" />}
+        <StampArt seed={letter.id} />
       </div>
 
       {state === null && !pending && !failed && (
@@ -298,7 +306,6 @@ export default function Letters() {
 
       {ordered.length > 0 && (
         <div className="archive">
-          <span className="spine" aria-hidden />
           {ordered.map((letter) => (
             <LetterNode key={letter.id} letter={letter} isMine={letter.sender_id === me?.id} />
           ))}

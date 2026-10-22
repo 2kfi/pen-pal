@@ -7,6 +7,7 @@ import { SecureContextError, sealLetter } from '../lib/crypto';
 import { useAuth } from '../stores/auth';
 import { usePairing } from '../stores/pairing';
 import Field from '../components/Field';
+import StampArt from '../components/StampArt';
 import SealAnimation, { usePrefersReducedMotion, type SealMoment } from '../components/SealAnimation';
 
 const DRAFT_KEY = 'pp_draft';
@@ -187,7 +188,14 @@ export default function Compose() {
 
   return (
     <div className={`compose${busy ? ' is-sealing' : ''}`}>
-      <h1>Write a letter</h1>
+      <div className="compose-head">
+        <h1>Write a letter</h1>
+        {/* The draft is franked before it exists: one stamp, cut from tokens and
+            seeded by the constant draft id, identical for every compose page.
+            Decorative; the stamp that identifies a sent letter is stamped on
+            the card in the archive, seeded by that letter's real id. */}
+        <StampArt seed="compose" />
+      </div>
 
       {!partner && !loading && (
         <p className="muted">

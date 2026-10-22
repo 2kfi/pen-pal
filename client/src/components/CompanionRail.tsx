@@ -60,7 +60,7 @@ export default function CompanionRail() {
         </Link>
       )}
 
-      <Link to="/compose" className="rail-compose">
+      <Link to="/compose" className="button primary rail-compose">
         Write a letter
       </Link>
     </nav>

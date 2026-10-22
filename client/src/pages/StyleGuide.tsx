@@ -480,9 +480,9 @@ const TYPE_STEPS = [
 const FAMILIES: Array<{ token: string; name: string; rule: string; weights: string }> = [
   {
     token: 'font-display',
-    name: 'Syne',
-    rule: 'Headings and figures only. Never a paragraph.',
-    weights: '700 headings, 800 for a number that is the point of the page',
+    name: 'Inter',
+    rule: 'The interface: headers, buttons, navigation, card metadata. Never a reading paragraph.',
+    weights: '600 for emphasis, 700 for headings',
   },
   {
     token: 'font-reading',
