@@ -30,6 +30,7 @@ import {
   describeOutcome,
   gamesApi,
   newLocalGame,
+  positionBeforeLastPly,
   openGame,
   sealGame,
   sealPayload,
@@ -67,6 +68,14 @@ export interface GamesState {
   offerUndo: () => Promise<void>;
   acceptUndo: () => Promise<void>;
   declineUndo: () => Promise<void>;
+  /**
+   * Rebuilds `previous` from the sealed move list after a refresh, so a
+   * take-back survives the page being reloaded. Cheap (one replay) and honest:
+   * it never synthesises a position that has not been sealed both ways.
+   */
+  recallUndoBase: () => void;
+  /** Opens a finished game's final position again, read-only. */
+  reopen: (id: number) => Promise<void>;
   reset: () => void;
 
   /** Sentence for the banner. Derived, so it cannot disagree with the session. */
@@ -330,6 +339,40 @@ export const useGames = create<GamesState>((set, get) => ({
       set({ session: game, sending: false, notice: 'Take-back declined. The move stands.' });
     } catch (e) {
       set({ sending: false, error: e instanceof Error ? e.message : 'The offer was not declined.' });
+    }
+  },
+
+  recallUndoBase: () => {
+    const { session, moves, previous } = get();
+    if (!session || previous || session.status !== 'open') return;
+    const me = useAuth.getState().user;
+    if (!me || session.lastMoveBy !== me.id) return;
+    try {
+      set({ previous: positionBeforeLastPly(moves) });
+    } catch {
+      // A list that failed verification never reaches this store, so this is
+      // paranoia. Leave `previous` null: the offer simply is not drawn, rather
+      // than drawn and refused.
+    }
+  },
+
+  reopen: async (id) => {
+    set({ loading: true, error: '', notice: '' });
+    try {
+      const me = useAuth.getState().user;
+      if (!me) throw new Error('You are not signed in.');
+      const { game } = await gamesApi.get(id);
+      if (game.status === 'open') throw new Error('That game is still being played.');
+      const name = currentPartnerName();
+      const adopted = await adopt(game, me.id, name);
+      set({
+        ...adopted,
+        previous: null,
+        loading: false,
+        notice: describeOutcome(game, me.id, name) + ' Reading it back does not change it.',
+      });
+    } catch (e) {
+      set({ loading: false, error: e instanceof Error ? e.message : 'That game could not be reopened.' });
     }
   },
 

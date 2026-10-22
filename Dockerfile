@@ -62,8 +62,8 @@ COPY scripts/ ./scripts/
 # one origin. The legacy app has since been deleted from the repo entirely.
 COPY --from=client-build /app/client/dist ./client/dist
 
-RUN mkdir -p data uploads \
-    && chown -R node:node /app/data /app/uploads \
+RUN mkdir -p data uploads backups \
+    && chown -R node:node /app/data /app/uploads /app/backups \
     && chmod 700 /app/data \
     && chmod 750 /app/uploads
 

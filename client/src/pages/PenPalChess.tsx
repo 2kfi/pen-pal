@@ -189,7 +189,7 @@ export default function PenPalChess({ embedded = false }: PenPalChessProps = {})
   const vaultStatus = useVault((s) => s.status);
   const me = useAuth((s) => s.user);
   const partner = usePairing((s) => s.partner);
-  const { load, play, create, resign, offerDraw, acceptDraw, declineDraw, offerUndo, acceptUndo, declineUndo } = games;
+  const { load, play, create, resign, offerDraw, acceptDraw, declineDraw, offerUndo, acceptUndo, declineUndo, reopen } = games;
 
   const partnerName = useMemo(() => nameOf(partner), [partner]);
   // The viewer's own name goes in the PGN header. A PGN that says "White" and
@@ -256,6 +256,17 @@ export default function PenPalChess({ embedded = false }: PenPalChessProps = {})
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [load]);
 
+  /**
+   * A take-back used to be unrecoverable after a refresh, because the rolled-
+   * back position lived only in page memory. It is not memory-only any more:
+   * the sealed move list is the history, so the base is re-derived whenever a
+   * session the viewer just moved in exists without a remembered base. The
+   * store is cheap and refuses if there is nothing honest to offer.
+   */
+  useEffect(() => {
+    useGames.getState().recallUndoBase();
+  }, [session?.id, session?.version]);
+
   const locked = vaultStatus !== 'unlocked' || !activeKey();
   const Heading = embedded ? 'h2' : 'h1';
 
@@ -313,7 +324,13 @@ export default function PenPalChess({ embedded = false }: PenPalChessProps = {})
             />
           )}
 
-          <Games history={games.history} viewerId={viewerId} partnerName={partnerName} />
+          <Games
+            history={games.history}
+            viewerId={viewerId}
+            partnerName={partnerName}
+            busy={games.sending || games.loading}
+            onReopen={(id) => void reopen(id)}
+          />
         </>
       )}
     </div>
@@ -647,10 +664,14 @@ function Games({
   history,
   viewerId,
   partnerName,
+  busy,
+  onReopen,
 }: {
   history: GameSummary[];
   viewerId: number;
   partnerName: string;
+  busy: boolean;
+  onReopen: (id: number) => void;
 }) {
   // Only what is over. The game in progress is the board, three lines above, and
   // listing it again here would say "Your move." under a heading that means
@@ -675,12 +696,15 @@ function Games({
                 winner, turn and side, so the archive and the board cannot end
                 up using two vocabularies for the same result. */}
             <p className="pp-game-outcome">{describeOutcome(game as unknown as GameSession, viewerId, partnerName)}</p>
+            <button type="button" disabled={busy} onClick={() => onReopen(game.id)}>
+              Read the final board
+            </button>
           </li>
         ))}
       </ul>
       <p className="pp-note">
-        The position of a finished game is not on this page. It is sealed, and the only copy is the
-        one you keep.
+        Reading a finished board back opens the last sealed position on the table above. It changes
+        nothing: the game stays finished.
       </p>
     </section>
   );

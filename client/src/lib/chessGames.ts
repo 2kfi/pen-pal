@@ -194,6 +194,27 @@ export function statusFromBoard(state: GameState): GameStatus {
   return 'open';
 }
 
+/**
+ * Rebuilds the position before the last ply of a sealed list.
+ *
+ * A take-back used to live only in page memory, so a refresh destroyed it and
+ * the offer could not be made. It does not have to be that way: the sealed move
+ * list IS the history, and replaying one ply short of the end is the position
+ * the server's rewind would hand back. Throws if a move is not legal, which
+ * verifySealedGame guards first — this is for a list that already passed.
+ */
+export function positionBeforeLastPly(moves: SealedMove[]): { position: GameState; moves: SealedMove[] } {
+  if (moves.length === 0) throw new Error('There are no moves to roll back.');
+  const replay = initialState();
+  const history: UndoStack = [];
+  for (const sealed of moves.slice(0, -1)) {
+    const found = legalMoves(replay).find((m) => uciOf(m) === sealed.uci);
+    if (!found) throw new Error(`Move ${sealed.ply} (${sealed.san}) is not legal in the position before it.`);
+    makeMove(replay, found, history);
+  }
+  return { position: replay, moves: moves.slice(0, -1) };
+}
+
 export function sealPayload(state: GameState, moves: SealedMove[]): SealedGame {
   return {
     v: 1,
