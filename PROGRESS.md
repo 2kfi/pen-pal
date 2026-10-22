@@ -107,7 +107,8 @@ These surfaced during the work and are tracked here so they don't get lost.
 
 | | |
 |---|---|
-| **UI rebuild 2026, phases 1-3 done** | The 2026 direction (`DESIGN-UPDATED.md`, referenced by `docs/DESIGN.md` §4) is adopted: postal-yellow palette solved for AA, Inter for the chrome (Literata stays for reading), 48px header + correspondence rail shell, letter-card grid with token-only stamp art, compose as a sheet. **Rituals, Settings and the chess pages are token-clean but not redesigned to the new direction yet — that is phase 4** |
+| **UI rebuild 2026, phase 4 done** | The 2026 direction (`DESIGN-UPDATED.md`, referenced by `docs/DESIGN.md` §4) is adopted end to end: postal-yellow palette solved for AA, Inter for the chrome (Literata stays for reading), 48px header + correspondence rail shell, letter-card grid with token-only stamp art, compose as a sheet. Rituals/Settings/chess carried over (segmented controls, one accent per screen, Phone-wrap gate fixed); StyleGuide specimens truthful again with the four new parts; `dir="auto"` + logical properties for RTL readiness; loading states wait in their own shape |
+| **Chess table completeness** | A take-back now survives a refresh (base re-derived from the sealed move list) and finished games can be read back from the archive row |
 | **Photos unencrypted at rest** | Letter bodies are encrypted. **Attachments are not** — they sit behind an authenticated route, not cryptography. Stated in README, SELF-HOSTING and HANDOFF |
 | **Not offline** | There is now a manifest and real app icons, so it installs. **No service worker**, so it still needs a network to open. A URL in a browser that will not work if you are on a train |
 | **Kiwipete perft** | Still 1 short at depth 2, 51 short at depth 3. Unrooted; not fixed, deliberately |
@@ -122,10 +123,10 @@ These surfaced during the work and are tracked here so they don't get lost.
 Every one of these must stay green.
 
 ```bash
-npm run design:check                      # 30 contrast pairs + the docs colour gate
+npm run design:check                      # 40 contrast pairs + the docs colour gate
 npm run lint
-npm test                                  # 286 server tests
-npm --prefix client test                  # 76 crypto, perft, session, pgn
+npm test                                  # 289 tests (server + client lib)
+npm --prefix client test                  # 79 crypto, perft, session, pgn, sealed-list
 npm --prefix client run build             # typecheck + vite build
 ```
 
