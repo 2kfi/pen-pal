@@ -73,11 +73,30 @@ module.exports = function ritualRepo(db) {
     ensured.done = true;
   }
 
-  /** Canonical pair identifier: the two user ids, ascending. "7-11". */
-  function pairKeyFor(userId) {
-    const row = db
-      .prepare('SELECT partner_id, created_at FROM pairs WHERE user_id = ?')
-      .get(userId);
+  /**
+   * Canonical pair identifier: the two user ids, ascending. "7-11".
+   *
+   * With pal-plural, the caller must name WHICH pal the ritual is for. The
+   * argument is answered against the caller's own `pairs` rows — a partner id
+   * that is not one of them buys nothing, so a guessed or forged partnerId
+   * cannot address another pair's puzzle or ledger. Omitted, it stays the
+   * single-pal shape: resolve backwards compat as the most recent partnership.
+   */
+  function pairKeyFor(userId, partnerId) {
+    let row;
+    if (partnerId === undefined || partnerId === null || partnerId === '') {
+      row = db
+        .prepare(
+          'SELECT partner_id, created_at FROM pairs WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1',
+        )
+        .get(userId);
+    } else {
+      const asked = Number(partnerId);
+      if (!Number.isInteger(asked)) return null;
+      row = db
+        .prepare('SELECT partner_id, created_at FROM pairs WHERE user_id = ? AND partner_id = ?')
+        .get(userId, asked);
+    }
     if (!row) return null;
     const lo = Math.min(userId, row.partner_id);
     const hi = Math.max(userId, row.partner_id);

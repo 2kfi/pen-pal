@@ -21,9 +21,25 @@ function isPaired(db, aId, bId) {
   return !!db.prepare('SELECT user_id FROM pairs WHERE user_id = ? AND partner_id = ?').get(aId, bId);
 }
 
-/** The current partner row for a user, or undefined. */
+/** Every handshake row for one user, newest first. */
+function allPairs(db, userId) {
+  return db
+    .prepare('SELECT * FROM pairs WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
+    .all(userId);
+}
+
+/** One specific partnership row, or undefined. Derived from the caller's own rows. */
+function pairWith(db, userId, partnerId) {
+  return db
+    .prepare('SELECT * FROM pairs WHERE user_id = ? AND partner_id = ?')
+    .get(userId, partnerId);
+}
+
+/** The "selected" partner: the most recent partnership. Kept for one release so
+ *  clients and tests written against the single-pal shape keep working; the
+ *  switcher comes from `partners` below. */
 function currentPair(db, userId) {
-  return db.prepare('SELECT * FROM pairs WHERE user_id = ?').get(userId);
+  return allPairs(db, userId)[0];
 }
 
 module.exports = function pairingRoutes({ authenticateToken, perUser, writeMax, log }) {
@@ -85,18 +101,13 @@ module.exports = function pairingRoutes({ authenticateToken, perUser, writeMax, 
       .prepare('SELECT id, target_pid, status FROM pairings WHERE requester_id = ?')
       .all(req.user.id);
 
-    let partner = null;
-    const pair = currentPair(db, req.user.id);
-    if (pair) {
-      partner =
-        db
-          .prepare(
-            'SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?',
-          )
-          .get(pair.partner_id) ?? null;
-    }
+    const partners = allPairs(db, req.user.id).map((pair) =>
+      db.prepare(
+        'SELECT id, username, friendly_name, pid, public_key as publicKey, avatar_url FROM users WHERE id = ?',
+      ).get(pair.partner_id) ?? pair.partner_id,
+    );
 
-    res.json({ incoming, outgoing, partner });
+    res.json({ incoming, outgoing, partners, partner: partners[0] ?? null });
   });
 
   router.post('/pairing/accept', authenticateToken, (req, res) => {
@@ -121,21 +132,21 @@ module.exports = function pairingRoutes({ authenticateToken, perUser, writeMax, 
       const target = db.prepare('SELECT id FROM users WHERE pid = ?').get(request.target_pid);
       if (!target) return res.status(404).json({ error: 'User not found' });
 
-      // One partner, at a time. The question is "is EITHER party already paired
-      // with anyone", not "are these two already paired" — checking the latter
-      // lets a paired user accept a second partner and then hit the pairs
-      // PRIMARY KEY. v0.0.2 checked nothing, so a user could accumulate
-      // unlimited pairs and the partner lookup returned an ARBITRARY one, meaning
-      // Compose could silently post a letter to whichever partner surfaced first.
-      const alreadyPaired = db
-        .prepare('SELECT user_id FROM pairs WHERE user_id IN (?, ?) LIMIT 1')
-        .get(request.requester_id, target.id);
+      // Pen pals, plural. What is still refused: pairing the SAME two people
+      // twice in either direction. Refusing "is either party paired at all"
+      // would make the plural impossible; refusing nothing would let a
+      // duplicate row through as a second channel to the same person, which is
+      // how letters could get silently addressed twice. The two parties here
+      // are the requester and the acceptor (`target` was addressed by pid, so
+      // it IS the acceptor).
+      const partnerRow = pairWith(db, req.user.id, request.requester_id);
+      const reverseRow = pairWith(db, request.requester_id, req.user.id);
 
-      if (alreadyPaired) {
+      if (partnerRow || reverseRow) {
         db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('superseded', requestId);
         return res
           .status(409)
-          .json({ error: 'One of you is already paired. Unpair before accepting someone new.' });
+          .json({ error: 'You two are already writing to each other.' });
       }
 
       db.prepare('UPDATE pairings SET status = ? WHERE id = ?').run('accepted', requestId);
@@ -185,20 +196,47 @@ module.exports = function pairingRoutes({ authenticateToken, perUser, writeMax, 
   /**
    * DELETE /pairs/unpair
    *
-   * Both rows go together so the two sides can never disagree about whether they
-   * are still paired. Deleting only the caller's row would leave the partner
-   * pointing at someone who has moved on, and their next letter would be
-   * addressed to a stranger.
+   * One partnership per call, addressed by `partnerId`. Both rows of THAT
+   * partnership go together so the two sides can never disagree about whether
+   * they are still paired. Deleting only the caller's row would leave the
+   * partner pointing at someone who has moved on, and their next letter would
+   * be addressed to a stranger.
+   *
+   * A body without `partnerId` is accepted only while the caller has exactly
+   * one partnership — the single-pal client shape. A person with several pals
+   * must say who ends; "unpair everyone" is not a sentence this endpoint knows.
    *
    * Letters already sent are NOT deleted. Unpairing closes the channel going
    * forward; it is not a way to unsay something, and quietly erasing a person's
    * letters because they reparied would be unforgivable.
    */
   router.delete('/pairs/unpair', authenticateToken, (req, res) => {
+    const { partnerId } = req.body || {};
     try {
+      const db = getDb();
+      const mine = allPairs(db, req.user.id);
+      let partner_id;
+      if (partnerId === undefined || partnerId === null || partnerId === '') {
+        if (mine.length !== 1) {
+          return res
+            .status(400)
+            .json({ error: 'partnerId is required when you have more than one pen pal' });
+        }
+        partner_id = mine[0].partner_id;
+      } else {
+        const asked = Number(partnerId);
+        if (!Number.isInteger(asked)) return res.status(400).json({ error: 'partnerId must be a user id' });
+        if (!mine.some((p) => p.partner_id === asked)) {
+          return res.status(403).json({ error: 'That person is not your pen pal' });
+        }
+        partner_id = asked;
+      }
+
       getDb()
-        .prepare('DELETE FROM pairs WHERE user_id = ? OR partner_id = ?')
-        .run(req.user.id, req.user.id);
+        .prepare(
+          'DELETE FROM pairs WHERE (user_id = :me AND partner_id = :them) OR (user_id = :them AND partner_id = :me)',
+        )
+        .run({ me: req.user.id, them: partner_id });
       res.json({ success: true });
     } catch (err) {
       failed('unpair', err);
@@ -211,3 +249,5 @@ module.exports = function pairingRoutes({ authenticateToken, perUser, writeMax, 
 
 module.exports.isPaired = isPaired;
 module.exports.currentPair = currentPair;
+module.exports.allPairs = allPairs;
+module.exports.pairWith = pairWith;

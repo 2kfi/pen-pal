@@ -74,8 +74,13 @@ module.exports = function ritualRoutes() {
 
   r.use(authenticateToken);
 
+  // Which pal a ritual is for: the `pal` query param names one of the caller's
+  // own partners, and the repo re-derives it against `pairs`, so anything else
+  // falls through to the single-pal default (most recent partnership).
+  const palOf = (req) => req.query.pal;
+
   r.get('/', (req, res) => {
-    const { pairKey, userId, partnerId, pairedAt } = repo.pairKeyFor(req.user.id) ?? {};
+    const { pairKey, userId, partnerId, pairedAt } = repo.pairKeyFor(req.user.id, palOf(req)) ?? {};
     if (!pairKey) {
       // Not an error state — it is the first thing the page has to say. There is
       // simply no pair to run a ritual for.
@@ -121,7 +126,7 @@ module.exports = function ritualRoutes() {
   });
 
   r.post('/puzzle', (req, res) => {
-    const pair = repo.pairKeyFor(req.user.id);
+    const pair = repo.pairKeyFor(req.user.id, req.query.pal ?? req.body?.pal);
     if (!pair) return res.status(409).json({ error: 'You are not paired with anyone yet.' });
 
     const { day, encryptedAnswer } = req.body || {};
@@ -155,7 +160,7 @@ module.exports = function ritualRoutes() {
   });
 
   r.put('/ledger', (req, res) => {
-    const pair = repo.pairKeyFor(req.user.id);
+    const pair = repo.pairKeyFor(req.user.id, req.query.pal ?? req.body?.pal);
     if (!pair) return res.status(409).json({ error: 'You are not paired with anyone yet.' });
 
     const { encryptedState } = req.body || {};

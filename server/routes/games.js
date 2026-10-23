@@ -176,11 +176,14 @@ module.exports = function gameRoutes() {
 
   r.use(authenticateToken);
 
-  /** Everything a route needs about the caller, or null with a 409 already sent. */
+  /** Everything a route needs about the caller, or null with a 409 already sent.
+   *  `pal` selects which of the caller's pen pals the game is for; it is
+   *  re-derived against `pairs` in the repo, so a forged id fails closed. */
   const pairOf = (req, res) => {
-    const pair = repo().pairFor(req.user.id);
+    const pal = req.query.pal ?? req.body?.pal;
+    const pair = repo().pairFor(req.user.id, pal);
     if (!pair) {
-      res.status(409).json({ error: 'You are not paired with anyone yet.', paired: false });
+      res.status(409).json({ error: pal ? 'That person is not your pen pal.' : 'You are not paired with anyone yet.', paired: false });
       return null;
     }
     return pair;

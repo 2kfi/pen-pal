@@ -66,13 +66,29 @@ module.exports = function gameRepo(db, options = {}) {
     Number.isFinite(options.turnTimeoutMs) ? Math.max(0, options.turnTimeoutMs) : readTurnTimeoutMs();
 
   /**
-   * The canonical pair, from the authenticated user's own `pairs` row.
+   * The canonical pair, derived from the authenticated user's own `pairs` rows.
    *
    * Never taken from a request body. There is no request shape that can address
-   * another pair's game, and a guess of `pair_key` buys nothing.
+   * another pair's game, and a guess of `pair_key` buys nothing. With
+   * pal-plural the caller names which pal the game is against via
+   * `req.query.pal`; that id is re-checked against `pairs` here, so a forged
+   * partner id resolves to null rather than to someone else's board.
    */
-  function pairFor(userId) {
-    const row = db.prepare('SELECT partner_id, created_at FROM pairs WHERE user_id = ?').get(userId);
+  function pairFor(userId, partnerId) {
+    let row;
+    if (partnerId === undefined || partnerId === null || partnerId === '') {
+      row = db
+        .prepare(
+          'SELECT partner_id, created_at FROM pairs WHERE user_id = ? ORDER BY created_at DESC, rowid DESC LIMIT 1',
+        )
+        .get(userId);
+    } else {
+      const asked = Number(partnerId);
+      if (!Number.isInteger(asked)) return null;
+      row = db
+        .prepare('SELECT partner_id, created_at FROM pairs WHERE user_id = ? AND partner_id = ?')
+        .get(userId, asked);
+    }
     if (!row) return null;
     const lo = Math.min(userId, row.partner_id);
     const hi = Math.max(userId, row.partner_id);

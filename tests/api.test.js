@@ -101,13 +101,14 @@ describe('pairing', () => {
     const res = await request(app).get('/api/pairing/status').set(asUser(a.token));
     expect(res.body.partner).toBeTruthy();
     expect(res.body.partner.id).toBe(b.user.id);
+    expect(res.body.partners.map((p) => p.id)).toEqual([b.user.id]);
   });
 
-  it('refuses to accept a second pairing while already paired', async () => {
+  it('keeps distinct pen pals apart: a second pairing is a second channel', async () => {
     const { a, b } = await pairedCouple();
     const third = await signup();
 
-    // `b` is already paired with `a`, so `a` inviting `third` cannot be accepted.
+    // `a` already corresponds with `b`; inviting `third` is a NEW channel.
     const req = await request(app)
       .post('/api/pairing/request')
       .set(asUser(a.token))
@@ -122,11 +123,49 @@ describe('pairing', () => {
       .set(asUser(third.token))
       .send({ requestId: invite.id });
 
-    expect(res.status).toBe(409);
+    expect(res.status).toBe(200);
 
-    // And the original pairing is untouched.
+    // Now a has two pals and third has exactly one; b is untouched.
+    const aStatus = await request(app).get('/api/pairing/status').set(asUser(a.token));
+    expect(new Set(aStatus.body.partners.map((p) => p.id))).toEqual(
+      new Set([b.user.id, third.user.id]),
+    );
     const stillPaired = await request(app).get('/api/pairing/status').set(asUser(b.token));
     expect(stillPaired.body.partner.id).toBe(a.user.id);
+  });
+
+  it('refuses to pair the same two people in either direction twice', async () => {
+    const { a, b } = await pairedCouple();
+    const third = await signup();
+
+    // b -> a while a -> b already exists: same two people, refused.
+    const req = await request(app)
+      .post('/api/pairing/request')
+      .set(asUser(b.token))
+      .send({ targetPid: a.user.pid });
+    expect(req.status).toBe(200);
+    const aStatus = await request(app).get('/api/pairing/status').set(asUser(a.token));
+    const invite = aStatus.body.incoming.find((r) => r.username === b.user.username);
+    const dup = await request(app)
+      .post('/api/pairing/accept')
+      .set(asUser(a.token))
+      .send({ requestId: invite.id });
+
+    expect(dup.status).toBe(409);
+
+    // And a fresh pairing to someone new still works after the refusal.
+    const req2 = await request(app)
+      .post('/api/pairing/request')
+      .set(asUser(b.token))
+      .send({ targetPid: third.user.pid });
+    expect(req2.status).toBe(200);
+    const thirdStatus = await request(app).get('/api/pairing/status').set(asUser(third.token));
+    const invite2 = thirdStatus.body.incoming.find((r) => r.username === b.user.username);
+    const fres = await request(app)
+      .post('/api/pairing/accept')
+      .set(asUser(third.token))
+      .send({ requestId: invite2.id });
+    expect(fres.status).toBe(200);
   });
 
   it('unpairing clears the partner for both sides', async () => {
@@ -138,6 +177,33 @@ describe('pairing', () => {
     const bSide = await request(app).get('/api/pairing/status').set(asUser(b.token));
     expect(aSide.body.partner).toBeNull();
     expect(bSide.body.partner).toBeNull();
+  });
+
+  it('unpairing is per pal and requires an address once there are several', async () => {
+    const { a, b } = await pairedCouple();
+    const third = await signup();
+    await request(app).post('/api/pairing/request').set(asUser(a.token)).send({ targetPid: third.user.pid });
+    const thirdStatus = await request(app).get('/api/pairing/status').set(asUser(third.token));
+    const invite = thirdStatus.body.incoming.find((r) => r.username === a.user.username);
+    await request(app).post('/api/pairing/accept').set(asUser(third.token)).send({ requestId: invite.id });
+
+    // Two pals: a bare "end it" is refused rather than guessed.
+    const bare = await request(app).delete('/api/pairs/unpair').set(asUser(a.token));
+    expect(bare.status).toBe(400);
+
+    // Ending one leaves the other intact ON BOTH SIDES.
+    const endOne = await request(app)
+      .delete('/api/pairs/unpair')
+      .set(asUser(a.token))
+      .send({ partnerId: third.user.id });
+    expect(endOne.status).toBe(200);
+
+    const aStatus = await request(app).get('/api/pairing/status').set(asUser(a.token));
+    expect(aStatus.body.partners.map((p) => p.id)).toEqual([b.user.id]);
+    const thirdSide = await request(app).get('/api/pairing/status').set(asUser(third.token));
+    expect(thirdSide.body.partner).toBeNull();
+    const bSide = await request(app).get('/api/pairing/status').set(asUser(b.token));
+    expect(bSide.body.partner.id).toBe(a.user.id);
   });
 });
 
