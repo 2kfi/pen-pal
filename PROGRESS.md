@@ -97,7 +97,7 @@ The app could not be logged into. This phase made it usable.
 
 | Step | | Note |
 |---|---|---|
-| 29 | ✅ | Least-privilege tokens, concurrency groups, E2E gating the image build, deploy with health check **and rollback**, CodeQL, Dependabot |
+| 29 | ✅ | Least-privilege tokens, concurrency groups, E2E gating the image build, CodeQL, Dependabot. **The on-push deploy workflow was removed later** (v2→main ff-merge ended with a workflow that no longer matched any live host); the image itself still publishes on the registry tag |
 | 30 | ✅ | `MIGRATION.md` and `SECURITY.md` added. The v0.0.2 upgrade path is tested against a byte-accurate old-schema database, and `MIGRATION.md` states plainly what it cannot preserve |
 
 ---
