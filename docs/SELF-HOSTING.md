@@ -186,6 +186,20 @@ You are on plain HTTP. See section 2.
 `NODE_ENV=production` and no usable `JWT_SECRET` in `.env`. Generate one:
 `openssl rand -base64 32`.
 
+**`SqliteError: unable to open database file` on first boot**
+The container runs as the image's `node` user (uid 1000) on purpose, but the
+bind mounts hand it **your** `./data`, `./uploads` and `./backups` — and if
+Docker created those directories, they are root:root, which uid 1000 can
+neither read nor write. Hand ownership over and restart:
+
+```bash
+sudo chown -R 1000:1000 data uploads backups
+docker compose up -d
+```
+
+`install.sh` now does this itself before the first boot; the entry exists for
+any deploy that predates it.
+
 **Invites never arrive**
 Both of you must be signed in against the *same* server. If one of you is
 running a local copy, the PIDs will not match — PIDs are only meaningful
