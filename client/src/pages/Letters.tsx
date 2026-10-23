@@ -39,13 +39,29 @@ type NodeState =
   | { kind: 'sealed' }
   | { kind: 'error' };
 
-function postmark(letter: Letter, isMine: boolean): string {
-  const date = new Date(letter.sent_at).toLocaleDateString(undefined, {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-  });
-  return `${date} · ${isMine ? 'sent' : 'received'}`;
+/**
+ * "9 months ago", the way the reference card says it.
+ *
+ * Granularity steps like the postal world: hours inside the first day, then
+ * days, months, years — never "3 weeks ago" (nobody files mail by the week).
+ * A scheduled letter legitimately gets a future form ("in 3 days"), because
+ * that is the truth about when it will arrive.
+ */
+function relativeTime(iso: string): string {
+  const then = new Date(iso).getTime();
+  if (Number.isNaN(then)) return '';
+  const diff = then - Date.now();
+  const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto' });
+  const minutes = diff / 60_000;
+  if (Math.abs(minutes) < 1) return 'just now';
+  if (Math.abs(minutes) < 60) return rtf.format(Math.round(minutes), 'minute');
+  const hours = diff / 3_600_000;
+  if (Math.abs(hours) < 24) return rtf.format(Math.round(hours), 'hour');
+  const days = diff / 86_400_000;
+  if (Math.abs(days) < 45) return rtf.format(Math.round(days), 'day');
+  const months = diff / (86_400_000 * 30.44);
+  if (Math.abs(months) < 11.5) return rtf.format(Math.round(months), 'month');
+  return rtf.format(Math.round(diff / (86_400_000 * 365.25)), 'year');
 }
 
 /**
@@ -118,19 +134,16 @@ function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
 
   const body = (
     <>
-      {/* The card head: postmark words left, this letter's own stamp right. The
-          stamp is decorative (aria-hidden) and identical across states - you
-          cannot tell a sealed letter from an opened one by its sleeve. */}
-      <div className="letter-head">
-        <div className="letter-state">
-          {postmark(letter, isMine)}
-        {inTransit && <span> · in transit</span>}
-        {letter.state === 'replied' && <span> · replied</span>}
-          {pending && <span> · sending</span>}
-        </div>
-        {unread && <span className="letter-dot" aria-hidden="true" />}
-        <StampArt seed={letter.id} />
-      </div>
+      {/* Slowly-style card: the stamp is the hero, centred; the letter text
+          sits under it; the foot carries the relative time (left, like the
+          reference) and the postmark facts (right). Reading order in the DOM
+          puts the text first because it is the content. */}
+      {/* Reading order in the DOM puts the text first because it is the
+          content; the unread dot is a corner mark, not part of the flow. */}
+      {unread && <span className="letter-dot" aria-hidden="true" />}
+      <span className="letter-stamp">
+        <StampArt seed={letter.id} large />
+      </span>
 
       {state === null && !pending && !failed && (
         <p className="letter-excerpt muted">Opening…</p>
@@ -185,6 +198,21 @@ function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
           )}
         </>
       )}
+
+      <span className="letter-foot">
+        <span className="letter-when">{relativeTime(letter.sent_at)}</span>
+        <span className="letter-state">
+          {/* The quiet facts are for ears: sent/received/replied. The states
+              that change what the letter IS right now stay visible, because
+              they change what you can do with it. */}
+          <span className="sr-only">
+            {isMine ? 'sent' : 'received'}
+            {letter.state === 'replied' ? ' · replied' : ''}
+          </span>
+          {inTransit && <span> · in transit</span>}
+          {pending && <span> · sending</span>}
+        </span>
+      </span>
     </>
   );
 
@@ -196,8 +224,7 @@ function LetterNode({ letter, isMine }: { letter: Letter; isMine: boolean }) {
       data-state={pending ? 'sending' : failed ? 'failed' : letter.state}
     >
       {body}
-      {unread && <span className="sr-only">(unread)</span>}
-    </Link>
+      {unread && <span className="sr-only">(unread)</span>}    </Link>
   );
 }
 

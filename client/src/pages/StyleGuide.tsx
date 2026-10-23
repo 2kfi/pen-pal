@@ -1075,22 +1075,28 @@ function Gallery() {
 
         <Part
           name="Archive"
-          cls=".archive, .letter, .letter-head"
-          rule="A responsive card grid — four across at the reference width, one on a phone — not a list. The card head is postmark words left and this letter's own stamp right; you cannot tell a sealed letter from an opened one by its sleeve."
+          cls=".archive, .letter, .letter-stamp, .letter-foot"
+          rule="A responsive card grid — four across at the reference width, one on a phone — not a list. The card is the reference card: this letter's own stamp as the centred hero, the letter text under it, relative time alone in the foot. The state word is for ears except when the letter is travelling; you cannot tell a sealed letter from an opened one by its sleeve."
         >
           <div className="sg-letters archive">
             {[
-              { state: '2 Feb · opened', excerpt: 'The first one. Two words and a drawing of a bird.', transit: false, unread: false },
-              { state: '2 Mar · in transit', excerpt: 'Still travelling between here and there.', transit: true, unread: false },
-              { state: '9 Mar · unread', excerpt: 'Unopened, and the dot says so without colour alone.', transit: false, unread: true },
+              { state: 'opened', excerpt: 'The first one. Two words and a drawing of a bird.', when: '9 months ago', transit: false, unread: false },
+              { state: 'in transit', excerpt: 'Still travelling between here and there.', when: '7 months ago', transit: true, unread: false },
+              { state: 'unread', excerpt: 'Unopened, and the dot says so without colour alone.', when: '6 months ago', transit: false, unread: true },
             ].map((s) => (
               <div className={`letter${s.transit ? ' transit' : ''}`} key={s.state}>
-                <div className="letter-head">
-                  <div className="letter-state">{s.state}</div>
-                  {s.unread && <span className="letter-dot" aria-hidden="true" />}
-                  <StampArt seed={s.state} />
-                </div>
+                {s.unread && <span className="letter-dot" aria-hidden="true" />}
+                <span className="letter-stamp">
+                  <StampArt seed={s.state} large />
+                </span>
                 <p className="letter-excerpt">{s.excerpt}</p>
+                <span className="letter-foot">
+                  <span className="letter-when">{s.when}</span>
+                  <span className="letter-state">
+                    <span className="sr-only">{s.state}</span>
+                    {s.transit && <span> · in transit</span>}
+                  </span>
+                </span>
               </div>
             ))}
           </div>

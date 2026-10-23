@@ -21,13 +21,13 @@ import { useMemo, type ReactNode } from 'react';
  * from the same three strokes a letter's own postmark uses. It is aria-hidden
  * decorative art; the footprint never changes with the letter's state.
  */
-export default function StampArt({ seed }: { seed: number | string }) {
+export default function StampArt({ seed, large = false }: { seed: number | string; large?: boolean }) {
   const motif = useMemo(() => MOTIFS[Math.abs(hash(String(seed))) % MOTIFS.length], [seed]);
   return (
     <svg
-      className="stamp"
-      width="44"
-      height="52"
+      className={`stamp ${large ? 'stamp-large' : ''}`}
+      width={large ? 88 : 44}
+      height={large ? 104 : 52}
       viewBox="0 0 44 52"
       aria-hidden="true"
       focusable="false"

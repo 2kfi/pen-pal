@@ -748,7 +748,7 @@ textarea {
   position: relative;
   display: flex;
   flex-direction: column;
-  min-height: 168px;
+  min-height: 232px;
   padding: var(--space-4);
   margin-bottom: 0;
   background: var(--paper);
@@ -767,17 +767,59 @@ textarea {
   border-color: var(--muted);
 }
 
-/* The card head: postmark left, unread dot, this letter's own stamp right. */
-.letter-head {
+/* The card, like the reference: this letter's own stamp is the hero, centred
+   above the text. It is decorative (aria-hidden) and identical across states —
+   you cannot tell a sealed letter from an opened one by its sleeve. */
+.letter-stamp {
   display: flex;
-  align-items: flex-start;
+  justify-content: center;
+  margin: var(--space-1) 0 var(--space-2);
+}
+
+/* A centred stamp reads as a stamp because the card has air around it. */
+.stamp-large {
+  margin-bottom: 0;
+}
+
+/* The unread dot: visible, absolute at the card's corner like the reference's
+   corner marks, and the sr-only "(unread)" in the markup keeps status
+   non-colour-only. */
+.letter-dot {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+}
+
+/* The foot: when it was written (relative), and the postmark facts. The hairline
+   above it is the fold under which the envelope closes. */
+.letter-foot {
+  margin-top: auto;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
   gap: var(--space-2);
 }
 
-.letter-head .letter-state {
-  min-width: 0;
-  flex: 1;
-  padding-top: var(--space-1);
+.letter-when {
+  font-size: var(--type-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* The postmark facts never wrap into a second line — a foot that grows upward
+   into the letter text is the card denying it its own shape. */
+.letter-foot .letter-state {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .stamp {
@@ -862,6 +904,13 @@ textarea {
   font-size: var(--type-md);
   line-height: var(--leading-reading);
   overflow-wrap: anywhere;
+  /* Five lines, like the reference card: the excerpt teases, the reader keeps
+     the whole. The full text is behind the card; nothing is lost for screen
+     readers either — the clamp is visual only. */
+  display: -webkit-box;
+  -webkit-line-clamp: 5;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   /* Explicit: .letter is an <a>, and `a { color: var(--accent) }` would otherwise
      paint the whole letter excerpt in the accent colour. */
   color: var(--text);
