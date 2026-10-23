@@ -4,7 +4,8 @@
 
 **A letter takes time. That is the feature.**
 
-Self-hosted, end-to-end encrypted correspondence between exactly two people.
+Self-hosted, end-to-end encrypted correspondence. As many pen pals as you like —
+each correspondence its own sealed channel.
 
 `React` `TypeScript` `Express` `SQLite` `Docker` `WCAG 2.2 AA`
 
@@ -19,8 +20,11 @@ Slowly reintroduced letters: sealed, addressed by a six-character code, and
 carried at the speed of post. You cannot edit a letter after sending it. You
 cannot read the reply before you have written one worth answering.
 
-PenPal is that idea, self-hosted and actually encrypted. You and one other
-person. No feed, no followers, no algorithm, no second pairing.
+PenPal is that idea, self-hosted and actually encrypted. You and your pen pals —
+plural — but never a feed, never a follower count, never an algorithm. Each pal
+is a separate channel with its own archive, its own daily puzzle and streak,
+and its own chess board. An open channel is a promise you keep by writing, not
+by scrolling.
 
 The interface follows the metaphor. Paper, ink, a wax seal, a postmarked line
 carrying the date and the distance. Letters hang on a spine rather than sitting
@@ -40,7 +44,11 @@ it is prose and someone wrote it for you.
 
 ## What it actually does
 
-- **One partner.** Not a friend list. One person, enforced by the database.
+- **Pen pals, plural — one channel each.** Pair with as many people as you
+  like. Every correspondence is its own archive and its own address: you name
+  the pal you mean, and letters never leak between channels. A switcher in the
+  rail moves you between correspondences; each pal's unread count is its own.
+  Not a friend list — a shelf of correspondence files, one per person.
 - **Real E2E encryption.** Per-letter AES-256-GCM, content key wrapped to both
   parties with RSA-OAEP-2048. The server stores ciphertext it cannot read.
   If encryption fails, the letter is **not sent** — it will not quietly fall
@@ -135,9 +143,9 @@ npm start                        # http://localhost:3000
 | `POST` | `/api/login` | sign in |
 | `GET`/`PUT` | `/api/me` | profile |
 | `POST` | `/api/pairing/request` | invite by PID |
-| `GET` | `/api/pairing/status` | pending invites, current partner |
-| `POST` | `/api/pairing/accept` · `/reject` | respond |
-| `DELETE` | `/api/pairs/unpair` | end the pairing |
+| `GET` | `/api/pairing/status` | pending invites, all partners (latest as `partner`) |
+| `POST` | `/api/pairing/accept` · `/reject` | respond; accepts a second pal as a new channel |
+| `DELETE` | `/api/pairs/unpair` | end one pairing, by `partnerId` (bodies with several pals must name it) |
 | `POST` | `/api/letters/send` | send a sealed letter |
 | `GET` | `/api/letters/sync` | fetch (withholds undelivered letters) |
 | `POST` | `/api/photos/upload` | attachment, sanitised |

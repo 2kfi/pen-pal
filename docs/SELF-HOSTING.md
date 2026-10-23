@@ -209,15 +209,21 @@ within one deployment.
 Check whether you set a delivery date. A letter with a future date is withheld
 from the recipient by design; you will see it sitting in transit.
 
-**"One of you is already paired"**
-One account, one partner. Unpair before inviting someone else.
+**"You two are already writing to each other"**
+That exact pair exists (in either direction) — a refusal, not an accident.
+Pairing a *different* person is fine: every pal is its own new channel.
+
+**"partnerId is required when you have more than one pen pal"**
+Ending a pairing needs an address once you have more than one. Pass the pal to
+end on the Pairing page.
 
 ---
 
 ## 7. What this app is not
 
 - **Not anonymous.** Accounts use email and a password.
-- **Not a social network.** No feed, no discovery, no more than one partner.
+- **Not a social network.** No feed, no discovery. Pen pals, plural — but each
+  correspondence is its own channel, and you choose who you are writing to.
 - **Not fully private yet.** Letter bodies are encrypted. **Uploaded photos
   are not.**
 - **Not audited.** No third-party security review has been done.

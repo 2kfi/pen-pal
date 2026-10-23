@@ -417,6 +417,70 @@ p {
   font-size: var(--type-sm);
 }
 
+/**
+ * The pal switcher: one dial per pen pal, shown only when there is more than
+ * one correspondence. It sits between the companion card and the compose
+ * button — choosing WHO you are writing to is the same kind of act as writing.
+ * The pressed dial gets the same rule treatment as the card itself; no colour
+ * change alone, since state is never colour-only.
+ */
+.pal-switcher {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--rule);
+}
+
+.pal-dial {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  padding: 2px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color var(--duration-fast) var(--ease);
+}
+
+.pal-dial:hover {
+  border-color: var(--rule-strong);
+}
+
+.pal-dial-active {
+  border: 1px solid var(--rule-strong);
+  box-shadow: inset 0 0 0 1px var(--rule-strong);
+}
+
+.pal-dial:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Per-dial unread: the number, pal-name'd for screen readers. Same rule as the
+   rail's --danger badge, gated at 4.5:1 by the contrast checker. */
+.pal-dial-unread {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+  border-radius: var(--radius-chip);
+  border: 1px solid var(--danger);
+  background: var(--paper);
+  color: var(--danger);
+  font-family: var(--font-display);
+  font-size: var(--type-xs);
+  font-weight: 600;
+}
+
 .rail-footer {
   color: var(--muted);
   font-size: var(--type-xs);

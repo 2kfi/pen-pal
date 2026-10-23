@@ -10,7 +10,7 @@ import Field from '../components/Field';
  * postmark treatment and a copy button rather than being buried in a sentence.
  */
 export default function Pairing() {
-  const { incoming, outgoing, partner, myPid, loading, error, refresh, request, accept, reject, unpair } =
+  const { incoming, outgoing, partners, partner, myPid, loading, error, refresh, request, accept, reject, unpair, setActivePal } =
     usePairing();
   const [target, setTarget] = useState('');
   const [busy, setBusy] = useState(false);
@@ -48,7 +48,7 @@ export default function Pairing() {
 
   return (
     <div className="stack">
-      <h1>Your pen pal</h1>
+      <h1>Your pen pals</h1>
 
       <section className="card section">
         <h2>Your PID</h2>
@@ -61,49 +61,63 @@ export default function Pairing() {
         </div>
       </section>
 
-      {partner ? (
+      {partners.length > 0 && (
         <section className="card section">
-          <h2>Writing to</h2>
-          <div className="row">
-            <span className="partner-name">{partner.friendly_name || partner.username}</span>
-            <span className="postmark">{partner.pid}</span>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => void run(() => unpair(), 'You are unpaired.')}
-            >
-              Unpair
-            </button>
-          </div>
-          <p className="muted">You write to one person at a time. Unpair before inviting someone else.</p>
-        </section>
-      ) : (
-        <section className="card section">
-          <h2>Invite someone</h2>
-          <Field
-            id="target-pid"
-            label="Their PID"
-            value={target}
-            onChange={(v) => setTarget(v.toUpperCase().trim())}
-            maxLength={6}
-            placeholder="ABC123"
-            hint="Six characters, letters and numbers."
-          />
-          <button
-            className="primary"
-            type="button"
-            disabled={busy || target.length !== 6}
-            onClick={() =>
-              void run(async () => {
-                await request(target);
-                setTarget('');
-              }, 'Invite sent.')
-            }
-          >
-            Send invite
-          </button>
+          <h2>Writing to ({partners.length})</h2>
+          {partners.map((p) => (
+            <div key={p.id} className="row invite-row">
+              <span className="partner-name">{p.friendly_name || p.username}</span>
+              <span className="postmark">{p.pid}</span>
+              {p.id !== partner?.id && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void run(async () => setActivePal(p.id), 'Switched.')}
+                >
+                  Open
+                </button>
+              )}
+              {p.id === partner?.id && <span className="muted">open now</span>}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void run(() => unpair(p.id), 'You are unpaired.')}
+              >
+                Unpair
+              </button>
+            </div>
+          ))}
+          <p className="muted">
+            Each pal is its own correspondence — its archive, rituals and chess board are separate. Unpairing one never touches the others.
+          </p>
         </section>
       )}
+
+      <section className="card section">
+        <h2>Invite someone</h2>
+        <Field
+          id="target-pid"
+          label="Their PID"
+          value={target}
+          onChange={(v) => setTarget(v.toUpperCase().trim())}
+          maxLength={6}
+          placeholder="ABC123"
+          hint="Six characters, letters and numbers."
+        />
+        <button
+          className="primary"
+          type="button"
+          disabled={busy || target.length !== 6}
+          onClick={() =>
+            void run(async () => {
+              await request(target);
+              setTarget('');
+            }, 'Invite sent.')
+          }
+        >
+          Send invite
+        </button>
+      </section>
 
       <section className="card section">
         <h2>Invitations ({incoming.length})</h2>
@@ -127,7 +141,7 @@ export default function Pairing() {
         ))}
       </section>
 
-      {!partner && outgoing.length > 0 && (
+      {outgoing.length > 0 && (
         <section className="card section">
           <h2>Sent ({outgoing.length})</h2>
           {outgoing.map((o) => (

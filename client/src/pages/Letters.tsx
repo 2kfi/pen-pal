@@ -266,6 +266,13 @@ export default function Letters() {
 
   const ordered = items; // the controller already returns this newest-first
 
+  // The switcher decides whose correspondence is open. The sync stream carries
+  // every partnership's letters (one connection per user, not per pair), so the
+  // archive is cut here: everything not addressed between me and the active
+  // pal stays invisible until their card is pressed.
+  const palId = usePairing((st) => st.activePalId);
+  const channel = partnerSide(ordered, palId);
+
   return (
     <div>
       <h1>Your archive</h1>
@@ -304,7 +311,7 @@ export default function Letters() {
         </p>
       )}
 
-      {ordered.length === 0 && !loading && (
+      {channel.length === 0 && !loading && (
         <div className="card">
           <h2>Nothing here yet</h2>
           <p className="muted">
@@ -315,9 +322,9 @@ export default function Letters() {
         </div>
       )}
 
-      {ordered.length > 0 && (
+      {channel.length > 0 && (
         <div className="archive">
-          {ordered.map((letter) => (
+          {channel.map((letter) => (
             <LetterNode key={letter.id} letter={letter} isMine={letter.sender_id === me?.id} />
           ))}
         </div>
@@ -326,7 +333,7 @@ export default function Letters() {
       {/* The infinite-scroll trigger. Also a real button, for keyboard users and
           for anyone whose browser has no IntersectionObserver. */}
       <div ref={sentinel} aria-hidden={hasMore ? undefined : true}>
-        {hasMore && ordered.length > 0 && (
+        {hasMore && channel.length > 0 && (
           <button type="button" onClick={loadMore} disabled={loadingMore}>
             {loadingMore ? 'Fetching…' : 'Load older letters'}
           </button>
@@ -342,4 +349,17 @@ function safeParse(value: string): unknown {
   } catch {
     return null;
   }
+}
+
+/**
+ * The active correspondence: letters addressed between me and the named pal.
+ * With no pal resolved (still pairing) nothing survives the cut — an archive
+ * owned by nobody is the empty state's job, not ours.
+ */
+function partnerSide<T extends { sender_id: number; recipient_id: number }>(
+  letters: T[],
+  palId: number | null,
+): T[] {
+  if (palId === null) return [];
+  return letters.filter((l) => l.sender_id === palId || l.recipient_id === palId);
 }

@@ -189,6 +189,27 @@ module.exports = function gameRoutes() {
     return pair;
   };
 
+  /**
+   * A game addressed by id. The id routes below do not go through `pairOf`:
+   * an open board belongs to its correspondence, not to whichever pal happens
+   * to be active in the rail, so re-selecting a pal before every move would be
+   * the switcher getting in the way of a game in progress. The pair is derived
+   * from the game's own `pair_key`, and membership is checked against the
+   * caller — a guessed id for somebody else's relationship buys nothing.
+   */
+  const gameOf = (req, res) => {
+    const gameId = gameIdOf(req, res);
+    if (gameId === null) return null;
+    const game = repo().getForUser(gameId, req.user.id);
+    if (!game) {
+      res.status(404).json({ error: 'That game does not exist.' });
+      return null;
+    }
+    const members = game.pair_key.split('-').map(Number);
+    const partnerId = members.find((m) => m !== req.user.id);
+    return { game, partnerId, pairKey: game.pair_key };
+  };
+
   /** Maps a repo refusal onto the response. Returns true when it answered. */
   const sendRefusal = (res, result) => {
     if (result.ok) return false;
@@ -275,13 +296,9 @@ module.exports = function gameRoutes() {
   });
 
   r.get('/:id', (req, res) => {
-    const pair = pairOf(req, res);
-    if (!pair) return;
-    const gameId = gameIdOf(req, res);
-    if (gameId === null) return;
-    const game = repo().getFor(gameId, pair.pairKey);
-    if (!game) return res.status(404).json({ error: 'That game does not exist.' });
-    res.json({ game: publicGame(game, req.user.id) });
+    const found = gameOf(req, res);
+    if (!found) return;
+    res.json({ game: publicGame(found.game, req.user.id) });
   });
 
   /* ---------------------------------------------------------------- *
@@ -321,10 +338,9 @@ module.exports = function gameRoutes() {
    * ---------------------------------------------------------------- */
 
   r.post('/:id/move', (req, res) => {
-    const pair = pairOf(req, res);
-    if (!pair) return;
-    const gameId = gameIdOf(req, res);
-    if (gameId === null) return;
+    const found = gameOf(req, res);
+    if (!found) return;
+    const gameId = found.game.id;
 
     const { color, status, encryptedState, version } = req.body || {};
     if (color !== 'w' && color !== 'b') return res.status(400).json({ error: 'color must be "w" or "b".' });
@@ -333,13 +349,13 @@ module.exports = function gameRoutes() {
 
     const parsed = parsePositionEnvelope(encryptedState, {
       userId: req.user.id,
-      partnerId: pair.partnerId,
+      partnerId: found.partnerId,
     });
     if (parsed.error) return res.status(400).json({ error: parsed.error });
 
     const result = repo().playMove({
       gameId,
-      pairKey: pair.pairKey,
+      pairKey: found.pairKey,
       userId: req.user.id,
       color,
       status: status || 'open',
@@ -360,11 +376,9 @@ module.exports = function gameRoutes() {
    * ---------------------------------------------------------------- */
 
   r.post('/:id/resign', (req, res) => {
-    const pair = pairOf(req, res);
-    if (!pair) return;
-    const gameId = gameIdOf(req, res);
-    if (gameId === null) return;
-    const result = repo().resignGame({ gameId, pairKey: pair.pairKey, userId: req.user.id });
+    const found = gameOf(req, res);
+    if (!found) return;
+    const result = repo().resignGame({ gameId: found.game.id, pairKey: found.pairKey, userId: req.user.id });
     if (sendRefusal(res, result)) return;
     res.json({ resigned: true, game: publicGame(result.row, req.user.id) });
   });
@@ -372,11 +386,9 @@ module.exports = function gameRoutes() {
   /** Every negotiation verb shares this shape: nothing but the id and the pair. */
   const negotiation = (path, fn, verb) => {
     r.post(`/:id/${path}`, (req, res) => {
-      const pair = pairOf(req, res);
-      if (!pair) return;
-      const gameId = gameIdOf(req, res);
-      if (gameId === null) return;
-      const result = fn({ gameId, pairKey: pair.pairKey, userId: req.user.id });
+      const found = gameOf(req, res);
+      if (!found) return;
+      const result = fn({ gameId: found.game.id, pairKey: found.pairKey, userId: req.user.id });
       if (sendRefusal(res, result)) return;
       res.json({ [verb]: true, game: publicGame(result.row, req.user.id) });
     });
@@ -389,10 +401,8 @@ module.exports = function gameRoutes() {
   negotiation('undo/decline', (...args) => repo().declineUndo(...args), 'declined');
 
   r.post('/:id/undo', (req, res) => {
-    const pair = pairOf(req, res);
-    if (!pair) return;
-    const gameId = gameIdOf(req, res);
-    if (gameId === null) return;
+    const found = gameOf(req, res);
+    if (!found) return;
 
     const { encryptedState, version } = req.body || {};
     const bad = checkStr(encryptedState, { required: true, min: 1, max: MAX_ENVELOPE });
@@ -400,13 +410,13 @@ module.exports = function gameRoutes() {
 
     const parsed = parsePositionEnvelope(encryptedState, {
       userId: req.user.id,
-      partnerId: pair.partnerId,
+      partnerId: found.partnerId,
     });
     if (parsed.error) return res.status(400).json({ error: parsed.error });
 
     const result = repo().offerUndo({
-      gameId,
-      pairKey: pair.pairKey,
+      gameId: found.game.id,
+      pairKey: found.pairKey,
       userId: req.user.id,
       encryptedState,
       version: optionalInt(version),
@@ -416,13 +426,11 @@ module.exports = function gameRoutes() {
   });
 
   r.post('/:id/undo/accept', (req, res) => {
-    const pair = pairOf(req, res);
-    if (!pair) return;
-    const gameId = gameIdOf(req, res);
-    if (gameId === null) return;
+    const found = gameOf(req, res);
+    if (!found) return;
     const result = repo().acceptUndo({
-      gameId,
-      pairKey: pair.pairKey,
+      gameId: found.game.id,
+      pairKey: found.pairKey,
       userId: req.user.id,
       // Required here, not optional: accepting rewinds the board, and rewinding
       // onto a position that has moved on would silently discard a real move.

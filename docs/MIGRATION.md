@@ -353,6 +353,18 @@ docker compose logs pen-pal | grep -i "migration run failed"
 Two v0.0.2 states cannot be represented in the new schema. Neither is silent:
 both are logged, and the original rows stay in `pairs_legacy_v002`.
 
+> **2026-10 update.** The pen-pals-plural change (migration `070`) has since
+> revoked the one-partner rule this document describes: `pairs` lost the
+> `user_id` primary key and gained `UNIQUE(user_id, partner_id)` — many pals,
+> never the same pal twice. This section stays because it documents what the
+> v0.0.2→v2 path did under the single-partner schema, and it is still what
+> happens first in the run order: `020` rekeys on `user_id` and, as below,
+> drops every partner but the earliest; `070` runs after it and allows new
+> partnerships, but a row `020` already dropped stays dropped. If an upgrading
+> account had several v0.0.2 partners, the extras are logged at exactly the
+> line below and the rest are re-paired by hand. Nothing about 070 changes
+> what 020 already decided.
+
 ### A user with more than one partner
 
 v0.0.2 permitted it. `user_id` is a primary key now, so one row per user is all

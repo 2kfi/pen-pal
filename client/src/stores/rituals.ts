@@ -6,6 +6,11 @@ import { useAuth } from '../stores/auth';
 import { usePairing } from '../stores/pairing';
 import { computeStreak, puzzleFor, type Puzzle, type Streak } from '../lib/dailyPuzzle';
 
+/** The ritual you are doing is the one for the pal you have selected. */
+function activePalParam(): number | null {
+  return usePairing.getState().activePalId;
+}
+
 /**
  * Rituals (plan step 27).
  *
@@ -148,7 +153,13 @@ export const useRituals = create<RitualsState>((set, get) => ({
     set({ loading: true, error: '' });
     try {
       await usePairing.getState().refresh();
-      const query = day ? `?day=${encodeURIComponent(day)}` : '';
+      // Rituals are per correspondence. The pal named here is re-derived
+      // against `pairs` server-side; omitting it falls back to the newest pal.
+      const pal = activePalParam();
+      const params = new URLSearchParams();
+      if (day) params.set('day', day);
+      if (pal !== null) params.set('pal', String(pal));
+      const query = params.size ? `?${params}` : '';
       const summary = await api<SummaryResponse>(`/api/rituals${query}`);
       const activeDay = summary.day ?? summary.today;
 
@@ -206,7 +217,7 @@ export const useRituals = create<RitualsState>((set, get) => ({
         theirPending: boolean;
       }>('/api/rituals/puzzle', {
         method: 'POST',
-        body: JSON.stringify({ day: puzzle.day, encryptedAnswer: JSON.stringify(envelope) }),
+        body: JSON.stringify({ day: puzzle.day, encryptedAnswer: JSON.stringify(envelope), pal: activePalParam() }),
       });
 
       let revealed: RitualsState['revealed'] = null;
@@ -269,7 +280,7 @@ export const useRituals = create<RitualsState>((set, get) => ({
       });
       await api('/api/rituals/ledger', {
         method: 'PUT',
-        body: JSON.stringify({ encryptedState: JSON.stringify(envelope) }),
+        body: JSON.stringify({ encryptedState: JSON.stringify(envelope), pal: activePalParam() }),
       });
       set({ ledger, anniversary: day, saving: false, notice: 'Saved. Only you and your partner can read it.' });
     } catch (e) {

@@ -1,7 +1,7 @@
 # Handoff — state of V2
 
-> Updated after the Phase 0 + chess + design-audit commits on branch `v2`.
-> Read this first; it is written to be true at the moment you read it.
+> Updated 2026-10: the pen-pals-plural work has landed. Read this first; it is
+> written to be true at the moment you read it.
 
 ## Toolchain
 
@@ -27,6 +27,10 @@ Playwright is **not** on `PATH`. Use `~/.venvs/playwright/bin/python` directly.
   path, and the lockfile exclusion that made the Docker image unbuildable.
 - **Correctness:** one-partner-per-user is now a storage guarantee; scheduled
   letters are actually withheld until due.
+  *(2026-10 update: migration `070` revokes the one-partner rule — the storage
+  guarantee is now UNIQUE(user_id, partner_id): many pals, never the same pal
+  twice. Every per-pair surface (archive channel, rituals pair-key, chess
+  pair-key) names its pal and re-checks it against the caller's own pairings.)*
 - **Chess rules engine** verified by perft: startpos exact to depth 4
   (197281), Positions 3/4/5 exact.
 - **Design system** in `client/src/tokens.css`, documented in `docs/DESIGN.md`,
@@ -52,9 +56,9 @@ There is **no search/AI opponent**. The board is two-player on one device.
 ## Gates that must stay green
 
 ```bash
-npm run design:check                      # 22 contrast pairs
-npm test                                  # API tests
-npm --prefix client test                  # crypto + chess perft
+npm run design:check                      # 22 contrast pairs  (now: 40 + docs colour gate)
+npm test                                  # API tests (now 291)
+npm --prefix client test                  # crypto + chess perft (now 79)
 npm --prefix client run build             # typecheck + vite build
 ```
 

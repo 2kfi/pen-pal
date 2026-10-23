@@ -152,10 +152,27 @@ module.exports = function gameRepo(db, options = {}) {
    *
    * `pairKey` is mandatory on every read: an id alone is not authorisation.
    */
-  function getFor(gameId, pairKey) {
+   function getFor(gameId, pairKey) {
     ensureSchema();
     const row = find(gameId);
     if (!row || row.pair_key !== pairKey) return null;
+    return finaliseTimeout(row);
+  }
+
+  /**
+   * A game addressed by id, checked against the caller's own memberships. This
+   * is how the pal switcher works without having to re-select a correspondence
+   * before every move: the board you opened is the board you play, whoever is
+   * the active pal. The pair key comes from the game itself, never from a
+   * request body, so a guessed id for somebody else's relationship buys
+   * nothing.
+   */
+  function getForUser(gameId, userId) {
+    ensureSchema();
+    const row = find(gameId);
+    if (!row) return null;
+    const members = row.pair_key.split('-').map(Number);
+    if (!members.includes(userId)) return null;
     return finaliseTimeout(row);
   }
 
@@ -487,6 +504,7 @@ module.exports = function gameRepo(db, options = {}) {
 
     createGame,
     getFor,
+    getForUser,
     activeFor,
     listFor,
 

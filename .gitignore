@@ -87,3 +87,7 @@ __pycache__/
 # NOTE: package-lock.json is intentionally NOT ignored.
 # The Dockerfile runs `npm ci` in both /app and /app/client, which requires a
 # committed lockfile. Ignoring it (as v0.0.2 did) made the image unbuildable.
+
+# user work artifacts
+/image.jpg
+brag-output-*/

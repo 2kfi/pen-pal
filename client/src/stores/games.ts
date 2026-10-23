@@ -160,10 +160,13 @@ export const useGames = create<GamesState>((set, get) => ({
       }
       const partnerName = currentPartnerName();
 
-      // The archive of finished games is cheap and is what the reconnect view
-      // shows underneath the live board.
-      const listing = await gamesApi.list().catch(() => ({ games: [] as GameSummary[], activeId: null }));
-      const live = await gamesApi.active();
+      // The board is the active correspondence's board: the pal named here is
+      // re-checked against `pairs` server-side.
+      const pal = usePairing.getState().activePalId;
+      const listing = await gamesApi
+        .list(pal)
+        .catch(() => ({ games: [] as GameSummary[], activeId: null }));
+      const live = await gamesApi.active(pal);
 
       if (!live.game) {
         set({ history: listing.games, session: null, position: null, moves: [], previous: null, loading: false, notice: '' });
@@ -189,7 +192,7 @@ export const useGames = create<GamesState>((set, get) => ({
       const payload = sealPayload(state, []);
       const encrypted = await sealGame(payload, ctx);
 
-      const { game } = await gamesApi.create({ color, encryptedState: encrypted });
+      const { game } = await gamesApi.create({ color, encryptedState: encrypted }, usePairing.getState().activePalId);
       const adopted = await adopt(game, me.id, ctx.name);
       set({ ...adopted, sending: false, history: get().history });
     } catch (e) {

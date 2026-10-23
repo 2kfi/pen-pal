@@ -10,9 +10,10 @@
 **A letter takes time. That is the feature.**
 
 PenPal is a self-hosted, end-to-end encrypted correspondence app. You pair with
-exactly one person and exchange letters that cannot be edited after sending and
-cannot be opened early. The interface follows a postal metaphor: paper, wax,
-postmark, ink.
+as many pen pals as you like, and each correspondence is its own sealed
+channel: its own archive, its own daily puzzle and streak, its own chess board.
+Letters cannot be edited after sending and cannot be opened early. The
+interface follows a postal metaphor: paper, wax, postmark, ink.
 
 Every feature is judged against one question: *does this make two people keep
 writing to each other?*
@@ -107,6 +108,7 @@ These surfaced during the work and are tracked here so they don't get lost.
 
 | | |
 |---|---|
+| **Pen pals, plural (2026-10)** | The one-partner rule is gone. `pairs` lost its `user_id` PK to migration `070` and gained `UNIQUE(user_id, partner_id)`: many pals, never the same pal twice. Each correspondence is a separate channel — its own archive in the letter grid, its own daily ritual and ledger pair-key, its own chess pair-key. The rail carries a pal switcher (one dial per pal, unread counts per channel, never summed). Game routes resolve membership from the game's own `pair_key`, so an open board stays playable across pal switches; rituals/games name the pal server-side and re-check it against the caller's own pairings. Unpair is per pal and refuses to guess when several exist. Letters addressed by `sender_id`/`recipient_id` needed no schema change; the seal's AAD already binds sender + recipient, so a multi-pal world inherits its forgery resistance unchanged |
 | **UI rebuild 2026, phase 4 done** | The 2026 direction (`DESIGN-UPDATED.md`, referenced by `docs/DESIGN.md` §4) is adopted end to end: postal-yellow palette solved for AA, Inter for the chrome (Literata stays for reading), 48px header + correspondence rail shell, letter-card grid with token-only stamp art, compose as a sheet. Rituals/Settings/chess carried over (segmented controls, one accent per screen, Phone-wrap gate fixed); StyleGuide specimens truthful again with the four new parts; `dir="auto"` + logical properties for RTL readiness; loading states wait in their own shape |
 | **Chess table completeness** | A take-back now survives a refresh (base re-derived from the sealed move list) and finished games can be read back from the archive row |
 | **Photos unencrypted at rest** | Letter bodies are encrypted. **Attachments are not** — they sit behind an authenticated route, not cryptography. Stated in README, SELF-HOSTING and HANDOFF |
@@ -125,7 +127,7 @@ Every one of these must stay green.
 ```bash
 npm run design:check                      # 40 contrast pairs + the docs colour gate
 npm run lint
-npm test                                  # 289 tests (server + client lib)
+npm test                                  # 291 tests (server + client lib)
 npm --prefix client test                  # 79 crypto, perft, session, pgn, sealed-list
 npm --prefix client run build             # typecheck + vite build
 ```

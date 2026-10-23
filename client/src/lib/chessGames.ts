@@ -338,14 +338,23 @@ export interface MoveInput {
   status?: GameStatus;
 }
 
+/** Pal addressing for the pal-plural server: the named pal is re-checked
+ *  against the caller's own pairings there, so this is a selection, not a key. */
+function palParam(path: string, pal?: number | null): string {
+  if (pal === undefined || pal === null) return path;
+  return `${path}?pal=${pal}`;
+}
+
 export const gamesApi = {
-  list: () => api<{ games: GameSummary[]; activeId: number | null }>('/api/games'),
-  active: () => api<{ game: GameSession | null }>('/api/games/active'),
+  list: (pal?: number | null) =>
+    api<{ games: GameSummary[]; activeId: number | null }>(palParam('/api/games', pal)),
+  active: (pal?: number | null) =>
+    api<{ game: GameSession | null }>(palParam('/api/games/active', pal)),
   get: (id: number) => api<{ game: GameSession }>(`/api/games/${id}`),
-  create: (input: CreateGameInput) =>
-    api<{ created: boolean; game: GameSession }>('/api/games', {
+  create: (input: CreateGameInput, pal?: number | null) =>
+    api<{ created: boolean; game: GameSession }>(palParam('/api/games', pal), {
       method: 'POST',
-      body: JSON.stringify(input),
+      body: JSON.stringify({ ...input, pal: pal ?? undefined }),
     }),
   move: (id: number, input: MoveInput) =>
     api<{ accepted: boolean; ply: number; game: GameSession }>(`/api/games/${id}/move`, {
