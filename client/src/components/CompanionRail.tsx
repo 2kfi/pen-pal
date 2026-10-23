@@ -60,8 +60,11 @@ export default function CompanionRail() {
         </Link>
       )}
 
-      <Link to="/compose" className="button primary rail-compose">
-        Write a letter
+      <Link
+        to={partner ? '/letters/new' : '/pairing'}
+        className="button primary rail-compose"
+      >
+        {partner ? 'Write a letter' : 'Invite your pen pal'}
       </Link>
     </nav>
   );

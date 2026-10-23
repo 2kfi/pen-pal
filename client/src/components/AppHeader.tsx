@@ -44,7 +44,7 @@ export default function AppHeader({
         </nav>
 
         <div className="app-header-actions">
-          <NavLink to="/compose" className="icon-btn compose-btn" aria-label="Write a letter">
+          <NavLink to="/letters/new" className="icon-btn compose-btn" aria-label="Write a letter">
             <IconCompose />
             <span className="icon-btn-word">Write</span>
           </NavLink>

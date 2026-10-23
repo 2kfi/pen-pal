@@ -26,6 +26,7 @@ import {
   type Letter,
 } from '../stores/letters';
 import { useAuth } from '../stores/auth';
+import { usePairing } from '../stores/pairing';
 import { activeKey } from '../lib/vault';
 import { isEnvelope, openLetter } from '../lib/crypto';
 import { previewText } from '../lib/letterBody';
@@ -214,6 +215,10 @@ export default function Letters() {
     queued,
   } = useLetters();
   const me = useAuth((s) => s.user);
+  // The rail already refreshes this on mount; reading it here keeps the
+  // empty-state and the primary action honest about whether there is someone
+  // to write to at all.
+  const partner = usePairing((s) => s.partner);
 
   // Computed here rather than read off the store: it is a pure function of
   // `items` plus the signed-in user, and putting a fresh number in the store on
@@ -266,9 +271,15 @@ export default function Letters() {
       <h1>Your archive</h1>
 
       <div className="page-actions">
-        <Link to="/letters/new" className="button primary">
-          Write a letter
-        </Link>
+        {partner ? (
+          <Link to="/letters/new" className="button primary">
+            Write a letter
+          </Link>
+        ) : (
+          <Link to="/pairing" className="button primary">
+            Invite your pen pal
+          </Link>
+        )}
       </div>
 
       {error && (
@@ -297,7 +308,7 @@ export default function Letters() {
         <div className="card">
           <h2>Nothing here yet</h2>
           <p className="muted">
-            {items.length > 0
+            {partner
               ? 'Write the first letter. It will travel, and arrive when it arrives.'
               : 'You need a pen pal first. Send an invite, then start writing.'}
           </p>

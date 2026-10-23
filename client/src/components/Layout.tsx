@@ -20,7 +20,7 @@ import Unlock from '../pages/Unlock';
  * route: reading pages keep the 68ch measure, correspondence pages go wide so
  * the letter grid has room to be a grid.
  */
-const WIDE_ROUTES = ['/letters', '/compose', '/play'];
+const WIDE_ROUTES = ['/letters', '/play'];
 
 export default function Layout() {
   const user = useAuth((s) => s.user);
