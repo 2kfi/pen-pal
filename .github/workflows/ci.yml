@@ -134,7 +134,7 @@ jobs:
 
       - name: Upload screenshots
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-screenshots-${{ github.sha }}
           path: tests/e2e/screenshots
@@ -145,7 +145,7 @@ jobs:
       # single most useful artefact for debugging a failure.
       - name: Upload e2e database
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-database-${{ github.sha }}
           path: ${{ runner.temp }}/penpal-e2e-data/penpal.db
